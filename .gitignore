@@ -1,0 +1,25 @@
+# Dependencies and generated build output
+node_modules
+.node_modules*/
+dist/
+public/models/
+
+# Private configuration and local world state
+.env
+.env.*
+!.env.example
+data/
+backups/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.pem
+*.key
+
+# Local diagnostics and raw development captures
+*.log
+evidence/
+test-results*/
+playwright-report/
+.DS_Store

@@ -1,0 +1,40 @@
+{
+  "name": "fullstack-brandon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env server/index.js",
+    "prebuild": "npm run models",
+    "build": "vite build",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env server/index.js",
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "evaluate": "node scripts/evaluate.js",
+    "check": "npm test",
+    "models": "node scripts/export-models.js",
+    "test:e2e": "playwright test",
+    "pretest": "npm run build",
+    "backup": "node --env-file-if-exists=.env scripts/backup.js",
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\" \"server/**/*.js\" \"shared/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"*.js\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css}\" \"server/**/*.js\" \"shared/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"*.js\""
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "compression": "^1.8.2",
+    "express": "^5.1.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "prettier": "^3.9.9",
+    "vite": "^7.1.0"
+  }
+}

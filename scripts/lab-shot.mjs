@@ -1,0 +1,12 @@
+import { chromium } from "@playwright/test";
+const [,, out, query = "", w = "1400", h = "700"] = process.argv;
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage({ viewport: { width: +w, height: +h } });
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+await page.goto(`http://127.0.0.1:3200/lab/figurine.html?${query}`);
+await page.waitForFunction(() => document.body.dataset.ready === "1", null, { timeout: 60000 });
+await page.screenshot({ path: out });
+if (errors.length) console.log(errors.join("\n"));
+await browser.close();

@@ -1,0 +1,20 @@
+import { chromium } from "@playwright/test";
+import { careerSnapshots } from "../tests/fixtures/career.js";
+const state = structuredClone(careerSnapshots().foot); state.status = "running";
+const run = { id: "probe", state };
+const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"] });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+await context.addInitScript(() => localStorage.setItem("little-worlds:intro:v1", "seen"));
+await context.route("**/api/session", (route) => route.fulfill({ json: { run } }));
+await context.addInitScript(({ frame }) => { window.EventSource = class { constructor() { this.t = setInterval(() => this.onmessage?.({ data: JSON.stringify(frame) }), 350); } close() { clearInterval(this.t); } }; }, { frame: run });
+const page = await context.newPage();
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (m) => (m.type() === "error" || m.type() === "warning") && !/403/.test(m.text()) && errors.push(m.text().slice(0, 600)));
+await page.goto(process.env.GAME_URL, { waitUntil: "domcontentloaded" });
+await page.waitForFunction(() => Number(document.querySelector("canvas")?.dataset.renderFrames) > 20, null, { timeout: 90000 });
+const samples = [];
+for (let i = 0; i < 6; i++) { await page.waitForTimeout(1000); samples.push(await page.evaluate(() => { const d = document.querySelector("canvas").dataset; return { frames: +d.renderFrames, bakes: d.toyBakes, bakeMs: d.toyBakeMs, meshes: d.toyBakeMeshes, mats: d.toyMaterials, interval: d.frameInterval }; })); }
+console.log(samples.map((s, i) => JSON.stringify({ ...s, fps: i ? s.frames - samples[i - 1].frames : undefined })).join("\n"));
+if (errors.length) console.log("ERRORS:\n" + errors.join("\n---\n"));
+await browser.close();

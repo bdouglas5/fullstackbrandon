@@ -1,0 +1,27 @@
+import { chromium } from "@playwright/test";
+import { careerSnapshots } from "../tests/fixtures/career.js";
+const url = process.argv[2], cam = process.argv[3] || "default";
+const state = structuredClone(careerSnapshots().foot); state.status = "paused";
+const run = { id: "fps", state };
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
+await context.addInitScript(() => localStorage.setItem("little-worlds:intro:v1", "seen"));
+await context.route("**/api/session", (r) => r.fulfill({ json: { run } }));
+await context.route("**/src/Island.jsx*", async (route) => { const res = await route.fetch(); const src = await res.text(); await route.fulfill({ response: res, body: src.replace("scene.add(w.world);", "scene.add(w.world); window.__lw = { camera, controls, w, scene, controller, renderer };") }); });
+await context.addInitScript(({ frame }) => { window.EventSource = class { constructor() { this.t = setInterval(() => this.onmessage?.({ data: JSON.stringify(frame) }), 400); } close() { clearInterval(this.t); } }; }, { frame: run });
+const page = await context.newPage();
+await page.goto(url);
+await page.waitForFunction(() => Number(document.querySelector("canvas")?.dataset.renderFrames) > 30, null, { timeout: 90000 });
+if (cam === "follow") await page.evaluate(() => { const { camera, controls, controller } = window.__lw; const s = controller.current.subject; controls.target.copy(s); camera.position.copy(s).add({ x: 6, y: 6, z: 8 }); controls.update(); });
+await page.waitForTimeout(1500);
+const result = await page.evaluate(async () => {
+  const c = document.querySelector("canvas");
+  const f0 = Number(c.dataset.renderFrames), t0 = performance.now();
+  const gaps = []; let last = performance.now();
+  await new Promise((done) => { const tick = () => { const n = performance.now(); gaps.push(n - last); last = n; if (n - t0 < 4000) requestAnimationFrame(tick); else done(); }; requestAnimationFrame(tick); });
+  const f1 = Number(c.dataset.renderFrames);
+  gaps.sort((a, b) => a - b);
+  return { fps: +((f1 - f0) / ((performance.now() - t0) / 1000)).toFixed(1), p95gap: +gaps[Math.floor(gaps.length * 0.95)].toFixed(1), drawCalls: c.dataset.drawCalls, triangles: c.dataset.triangles, buffer: `${c.width}x${c.height}` };
+});
+console.log(url, cam, JSON.stringify(result));
+await browser.close();

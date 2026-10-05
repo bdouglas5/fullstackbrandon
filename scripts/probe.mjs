@@ -1,0 +1,21 @@
+import { chromium } from "@playwright/test";
+import { careerSnapshots } from "../tests/fixtures/career.js";
+const expr = process.argv[2];
+const state = structuredClone(careerSnapshots()[process.env.FIX || "foot"]); state.status = "paused";
+const run = { id: "probe", state };
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const context = await browser.newContext({ viewport: { width: 1200, height: 800 } });
+await context.addInitScript(() => localStorage.setItem("little-worlds:intro:v1", "seen"));
+await context.route("**/api/session", (r) => r.fulfill({ json: { run } }));
+await context.route("**/src/Island.jsx*", async (route) => { const res = await route.fetch(); const src = await res.text(); await route.fulfill({ response: res, body: src.replace("scene.add(w.world);", "scene.add(w.world); window.__lw = { camera, controls, w, scene, controller, renderer };") }); });
+await context.addInitScript(({ frame }) => { window.EventSource = class { constructor() { this.t = setInterval(() => this.onmessage?.({ data: JSON.stringify(frame) }), 350); } close() { clearInterval(this.t); } }; }, { frame: run });
+const page = await context.newPage();
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+page.on("console", (m) => m.type() === "error" && !/403/.test(m.text()) && errors.push(m.text().slice(0, 800)));
+await page.goto("http://127.0.0.1:3600");
+await page.waitForFunction(() => Number(document.querySelector("canvas")?.dataset.renderFrames) > 20, null, { timeout: 90000 });
+console.log(JSON.stringify(await page.evaluate(expr), null, 1));
+if (process.argv[3]) { await page.waitForTimeout(1500); await page.locator("canvas").first().screenshot({ path: process.argv[3] }); }
+if (errors.length) console.log("ERRORS", errors.join("\n"));
+await browser.close();

@@ -1,0 +1,18 @@
+services:
+  game:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the public HTTPS origin or http://localhost:3000 for a local container test}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      JEV_MODEL: ${JEV_MODEL:-jev-1.13.0}
+      JEV_DAILY_TOKENS: ${JEV_DAILY_TOKENS:-1000000}
+      JEV_SESSION_CALLS: ${JEV_SESSION_CALLS:-80}
+      MAX_ACTIVE_RUNS: ${MAX_ACTIVE_RUNS:-30}
+    volumes:
+      - world-data:/app/data
+    restart: unless-stopped
+    stop_grace_period: 10s
+volumes:
+  world-data:
