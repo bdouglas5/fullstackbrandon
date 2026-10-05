@@ -1,8 +1,8 @@
-# The AI can make a choice. It cannot print pickles.
+# How I use Jev, and how you can inspect its decisions
 
 [Project](../README.md) · [Architecture](ARCHITECTURE.md) · [Verification](VERIFICATION.md)
 
-I wanted an AI integration with a clear contract, visible consequences, and a useful failure mode. Jev selects an action from a finite eligible set. The engine remains responsible for exact execution.
+I give Jev the current situation and a set of actions that the engine allows. It chooses one, then the engine carries it out. That lets me inspect the result and keep the business running when a provider request fails.
 
 ## One decision, end to end
 
@@ -31,15 +31,15 @@ sequenceDiagram
 
 The diagram summarizes the flow. Some early exits, such as explicit rules mode or clock-out, avoid the provider entirely. Read [`server/jev.js`](../server/jev.js) for the exact control flow.
 
-## The context has a purpose
+## What I send to the provider
 
 The provider receives the operating situation: stock, carrying capacity, locations, schedule, wellbeing, construction, production, current equipment, customers, route conditions, and bounded saved experience. Legal choice descriptions include relevant costs and effects.
 
-This is action selection at meaningful decision points. It is not a model request every rendered frame. Provider latency is recorded separately, and the coordinator pauses simulation advancement for the affected run while a decision is pending. The renderer and UI can keep presenting that pending state.
+Requests happen when Brandon is ready to choose his next action. I record provider latency separately and pause advancement of that run while the request is pending. The browser can keep rendering the world and showing that he’s waiting for a decision.
 
-The engine computes routes and resource mutations. Jev is not being asked to do geometry, database work, or exact inventory arithmetic.
+The engine computes routes and updates resources. Keeping those operations in code gives me precise rules to test.
 
-## Failure is part of the contract
+## When a request fails
 
 | Condition | Behavior |
 | --- | --- |
@@ -69,11 +69,11 @@ They do not expose private model reasoning. A displayed confidence signal is not
 
 A useful question is whether those lessons change behavior in a beneficial way across comparable conditions. The implementation supplies a mechanism to investigate that question. It does not claim model retraining or measured long-term learning gains.
 
-## Replay is a recording, not another guess
+## Replaying a saved run
 
 Recorded frames reconstruct the world without calling the provider again. SQLite retains an exact recent window of 360 ticks and progressively coarser older snapshots. The UI shows the actual recorded tick.
 
-That distinction matters during a long career: older history is sampled. The slider should not imply an exact frame exists for every historical tick.
+Older history is sampled, so the slider displays the tick that was actually recorded. I don’t have an exact frame for every moment of a long career.
 
 ```mermaid
 flowchart LR
@@ -89,13 +89,13 @@ flowchart LR
 
 The store uses a SQLite savepoint to keep live state, frame writes, and achievement collection updates consistent. Decision checkpoints support the choices still exposed for inspection.
 
-## A branch asks a different question
+## Trying another action
 
 A branch substitutes a legal action at a saved checkpoint and creates a separate run while preserving the original. It lets a visitor ask, “What if I chose this instead?”
 
-That is a counterfactual exploration. A visitor who also changes weather, purchases, or other conditions has created a different experiment. Labeling a branch clearly prevents it from being mistaken for an unbiased controller comparison.
+If you also change weather, purchases, or other conditions, those changes affect the result. I label branches as counterfactual runs so you can distinguish an experiment you’ve intervened in from a matched controller comparison.
 
-## A comparison needs matched conditions
+## Comparing controllers
 
 The deterministic evaluator runs seeds 0, 7, 42, and 99, each unattended and disrupted: eight careers total. It records actual engine transitions and metrics under the rules controller. It makes no model requests and does not measure browser performance.
 

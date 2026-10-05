@@ -1,77 +1,77 @@
-# I made my portfolio into a world you can poke
+# Why I built Fullstack Brandon
 
 [Back to the project](../README.md) · [Architecture](ARCHITECTURE.md) · [Simulation](SIMULATION.md)
 
-I wanted a portfolio that lets someone experience how I think. You can read a list of technologies anywhere. Here, you can close the bridge and find out whether the backend, the route planner, the interface, and the little person carrying your pickles agree on what happens next.
+I wanted somebody opening my portfolio to have something they could play with. In Fullstack Brandon, you can watch a little version of me run a pickle business, interfere with a delivery, and see what he does about it. If you’re curious about the code, the decision records and replay are right there.
 
-That became Fullstack Brandon: an original miniature world wrapped around a functioning business simulation. The premise is intentionally ridiculous. The system has to be coherent enough to make the ridiculousness work.
+The setting gives me room to make the work personal. I can build a small town, give the characters their own equipment, fuss over how a bike turns, and add rocket skates to a wholesale delivery business. Underneath all that, I still have to make the stock, money, routes, and saved state agree.
 
-## Start with a visible problem
+## Starting in the garage
 
-The founder starts with no money, no purchased fleet, and a small amount of prepaid stock in a garage. Customers place orders. Orders need the right supplies and sometimes specialized equipment. Deliveries earn money. Money pays for supplies, transport, construction, and employees. Employees need their own equipment and actual time to recover.
+Brandon begins on foot with zero coins and six prepaid cases. He needs to deliver orders before he can buy more supplies or better transport. Customers have different requests, patience, and equipment needs. Hiring an employee adds wages and another person who needs their own vehicle and time off.
 
-That gives a visitor a story they can read from the scene. A person carries cargo. A shop requests cases. A workplace changes as the business grows. A shipment arrives. A vehicle gets repaired. These are useful interface signals because they connect abstract state to visible action.
+I like how much you can explain through that setup. You see a customer waiting, a courier carrying cases, or a shipment reaching the harbor. When the workplace grows from a garage into an office and then a factory island, the supply chain changes too. The scene gives you a way to understand those changes while they’re happening.
 
-I made the engineering tools optional. The default experience should make sense to someone who wants to play. Someone reviewing the implementation can open the decision record, inspect outcomes, and follow the source. Both paths lead into the same system.
+You can open the technical panels when you want the details. I kept them out of the way of the main game because I’d rather let someone meet Brandon and try a delivery before asking them to read about SQLite.
 
-## The work lives at the seams
+## What’s happening behind the scene
 
-| Visible moment | Engineering underneath | What I wanted the visitor to understand |
-| --- | --- | --- |
-| A courier reaches a shop | Graph travel, reservations, arrival and handoff state, inventory accounting | A delivery is an interaction with a destination |
-| A new workplace appears | Money, construction stages, progression, active supply origin | Growth changes how the business operates |
-| A storm rolls in | Saved environment state, transport effects, visual transitions | Weather is part of the run |
-| A decision is pending | Provider contract, bounded requests, coordinated simulation advancement | The controller is choosing within rules |
-| The visitor rewinds | Recorded frames and retained checkpoints | The past can be inspected without rerunning the provider |
-| A tired founder goes home | Business hours, unfinished work, fatigue, recovery | Productivity has context |
+| What you see | What the code is handling |
+| --- | --- |
+| A courier reaches a shop | Graph travel, traffic reservations, parking, entry, handoff, and inventory |
+| A workplace gets built | Construction costs and stages, progression, and a new supply origin |
+| A storm arrives | Saved weather state, transport restrictions, and visual transitions |
+| Brandon waits for a decision | A bounded provider request and coordinated simulation advancement |
+| You rewind the world | Recorded frames and retained decision checkpoints |
+| The crew heads home | Scheduled hours, unfinished work, fatigue, and recovery |
 
-## Decision: make the backend authoritative
+## Keeping the business on the server
 
-A scene can look convincing while quietly inventing its outcomes. I wanted the source of truth to be explicit. The browser sends commands; the server validates them and advances the world. The renderer consumes state and presents it.
+I put the authoritative state on the server. The browser sends commands, the server checks them, and the engine applies the consequences. The renderer receives that state and animates it.
 
-That makes a lot of other things easier to reason about: guest isolation, money, finite supplies, replay, AI budgets, and recovery. It also creates work. Motion has to interpolate between updates. Interface feedback has to explain pauses and unavailable actions. The scene needs to stay readable while the network and controller do their jobs.
+This gives me one place to check purchases, stock, guest ownership, and AI usage. It also makes persistence and replay easier to reason about. A refresh should bring you back to your saved world with the same inventory.
 
-I accepted that complexity because the result has an inspectable causal chain.
+There’s a cost to that choice. The browser has to interpolate between updates, and the interface has to explain when the controller is thinking or an action is unavailable. That’s extra coordination, but it lets me keep the business rules consistent while working on the presentation.
 
-## Decision: let AI choose; keep exact rules in code
+## Giving Jev a specific question
 
-Jev chooses among eligible actions. It does not set balances, create stock, invent destinations, or write arbitrary commands. The adapter records the controller used and falls back to the deterministic policy when needed.
+Jev chooses among actions that the engine has already checked. The engine computes the route and handles the stock, prices, timing, and effects. Each decision records which controller acted, including when the rules controller takes over.
 
-The interesting design problem is making the legal choices meaningful. A controller cannot rescue a bad action model. Each available choice needs clear preconditions and effects, and its outcome must be measurable after execution. I built the provider boundary around that contract.
+The work starts before the provider request. I need to define useful choices with clear preconditions: can Brandon fulfill this order with what he’s carrying? Does he need equipment first? Is it time to replenish supplies or finish the shift? Sending a vague question to the model would leave too much of the business undefined.
 
-Saved experience supplies operating lessons from outcomes and feedback. It is useful to call this what it is: persisted context. The system does not retrain the model. That distinction helps a reviewer understand precisely which part I implemented.
+Saved lessons give later requests context from outcomes and feedback. That’s persisted operating memory. The code doesn’t retrain Jev, and the authored action labels describe what Brandon is doing rather than the model’s private reasoning.
 
-## Decision: make the joke obey the economy
+## Making purchases worth making
 
-A cargo rack changes carrying capacity. A cooler prevents packing-room spoilage and supports cold-chain orders. A generator changes production during a blackout. A winch changes helicopter eligibility in storms. A courier's vehicle belongs to that courier.
+A cooler prevents packing-room spoilage and supports cold-chain orders. A generator keeps production going during an outage. A winch changes whether the helicopter can cross in a storm. Cargo racks change carrying capacity, and each courier has to own the transport they use.
 
-That is how I want upgrades to work: a purchase should alter a rule the player can encounter. The shop is a set of operational choices. Even the teleporter has to participate in cargo and progression rules. I will tolerate fictional technology; the inventory still has a job to do.
+I want to be able to buy something and notice the difference while playing. That means the catalog descriptions have to connect to actual rules in the engine. Even the teleporter needs a place in the cargo and progression model. It would be a pretty expensive way to discover your pickles are still at the garage.
 
-## Decision: give motion a lifecycle
+## Getting a delivery all the way to the door
 
-A vehicle arriving near a building is not the same event as a person delivering an order. The world needs parking, dismounting, walking, entry, handoff, exit, returning to equipment, and boarding. Sea and air trips have their own approach and landing requirements.
+This is one of the parts I care about most. Brandon needs to park, get out, walk to the business, hand over the ordered cases, come back, and board the same equipment. A boat or helicopter needs its own arrival and shore approach.
 
-Those stages touch many systems at once: carrying state, collision footprints, actor mode, destination markers, visible equipment, and when another decision is allowed. This is one of the most revealing parts of the project because a small visual discontinuity often exposes an unclear ownership boundary.
+That sequence involves more than a position on a map. The system has to remember his carrying state, parked vehicle, current mode, destination, and which interaction he’s finishing. A new decision has to wait until the committed interaction is complete.
 
-The implementation has dedicated movement, traffic, route, vehicle, and interaction tests. The verification guide separates those checks from visual browser acceptance; passing a state-machine test does not prove every frame looks smooth.
+The small details are easy to see when they’re wrong. If the route line ends somewhere other than the shop, or the van moves while its driver is inside, the whole delivery feels off. I use movement and traffic tests for the underlying rules, then browser review for how the sequence looks. Those checks answer different questions.
 
-## Decision: preserve the past without saving every frame forever
+## Saving enough history to use it
 
-Long careers produce growing state. Saving every snapshot indefinitely would turn replay into an operating cost problem. The store keeps a recent exact window and coarser older snapshots, while retained decision checkpoints support branching.
+A long career produces a lot of state. The store keeps exact frames for the last 360 ticks and samples older history more coarsely. The replay interface shows the recorded tick so you can tell what you’re looking at.
 
-A replay shows the recorded tick. A branch creates a separate run. External model responses do not need to be reproduced to inspect what happened. The storage tradeoff is visible rather than disguised as unlimited frame-perfect history.
+I also keep decision checkpoints for branching. You can substitute a legal action at a retained checkpoint and create another run without overwriting the original. Replay uses the saved states, so inspecting a past choice doesn’t depend on getting the same answer from the provider again.
 
-## Decision: keep operations understandable
+The tradeoff is storage against historical detail. I keep the recent action precise and older milestones accessible. The architecture guide explains the retention policy.
 
-One Node process owns active simulations and SQLite usage reservations. This fits a portfolio service with a clear persistent-disk deployment model. Backups use SQLite's backup API. Recovery restores interrupted running worlds as paused.
+## Running and recovering the app
 
-A distributed version would need shared coordination and transactional ownership. I document that boundary because architecture includes knowing which guarantees a design actually supplies.
+The deployment setup uses one Node process and a persistent SQLite disk. That process owns the active simulations and reserves provider usage before making requests. The backup script uses SQLite’s backup API, and interrupted running worlds restore as paused.
 
-## What this project demonstrates
+This is a manageable setup for the current app. Running multiple replicas would need shared simulation ownership and transactional usage reservations. I’ve documented that separately so the deployment instructions match what the code can support.
 
-The product brings interface design, procedural graphics, simulation, backend engineering, AI integration, persistence, and verification into one experience. The strongest evidence is how those parts agree when something changes.
+## Where I’d start if I were reviewing the code
 
-To inspect that agreement, follow one concrete event:
+Try closing a route during a run, then follow the next decision through the inspector. Here’s the path that change takes:
 
 ```mermaid
 flowchart LR
@@ -82,15 +82,13 @@ flowchart LR
     Accounting --> Record[Outcome is saved and inspectable]
 ```
 
-My goal is software with a clear internal model and a personality you can see. Here that personality happens to be a tiny entrepreneur with a increasingly unreasonable transportation budget.
+For the source, I’d read these in order:
 
-## A useful review route
+1. [Architecture](ARCHITECTURE.md), for how the parts fit together.
+2. [`shared/engine.js`](../shared/engine.js) and [`shared/realism.js`](../shared/realism.js), for the business rules.
+3. [`server/jev.js`](../server/jev.js), for the provider request and fallback handling.
+4. [`server/store.js`](../server/store.js), for persistence, replay, and checkpoints.
+5. [`shared/traffic.js`](../shared/traffic.js), [`src/Island.jsx`](../src/Island.jsx), and the motion modules, for how a delivery gets rendered.
+6. [Verification](VERIFICATION.md), for the checks and their current results.
 
-1. Read the [architecture](ARCHITECTURE.md) to understand ownership.
-2. Inspect [`shared/engine.js`](../shared/engine.js) and [`shared/realism.js`](../shared/realism.js) for the rules.
-3. Read [`server/jev.js`](../server/jev.js) for the actual provider contract.
-4. Follow [`server/store.js`](../server/store.js) into replay and persistence.
-5. Compare [`shared/traffic.js`](../shared/traffic.js) with [`src/Island.jsx`](../src/Island.jsx) and the motion modules.
-6. Run the checks in [verification](VERIFICATION.md), then explore the browser yourself.
-
-This is a simulation of an invented business. Its performance and economics are evaluated within that model. I want the repo to make the work easy to examine, including its remaining limits.
+This project lets me work on graphics and backend behavior in the same afternoon. I can spend time on a tiny bicycle, then follow its delivery through the inventory model and the database. I wanted that range of work to be visible when someone visits my portfolio.

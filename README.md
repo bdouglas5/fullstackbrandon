@@ -1,38 +1,40 @@
 # Fullstack Brandon
 
-### I built a tiny world to show how I think. Then I gave it a pickle economy.
+### A little 3D version of me trying to build a pickle business.
 
-**An interactive full-stack portfolio by Brandon Douglas.** A miniature 3D archipelago, an autonomous founder, a business with actual constraints, and an AI controller whose decisions you can inspect. React + Three.js in the browser. Node + Express + SQLite behind the curtain. A surprising amount of engineering between one jar of pickles and retirement.
+I’m **Brandon Douglas**, and this is my interactive portfolio. I built the islands, the characters, the business simulation, and the interface around an AI controller that helps little Brandon decide what to do next. You can watch him work, mess with his plans, and open up the decision records to see how it went.
+
+The app uses React and Three.js, with Node, Express, and SQLite on the backend.
 
 ![The procedural miniature island, with roads, shops, a harbor, and neighboring islands](docs/images/island-overview.png)
 
-> Start with zero coins, six prepaid cases, and your own two feet. Deliver. Earn. Build. Hire. Buy an island. Learn to take a weekend off. Eventually retire. Apparently my idea of a portfolio includes teaching a tiny version of myself how to stop working.
+> Brandon starts in his garage with zero coins and six prepaid cases. He has to deliver enough pickles to pay for supplies, better transport, employees, and eventually a factory island. There are rocket skates in the fleet. I stand by that decision.
 
 [Read the case study](docs/CASE_STUDY.md) · [Explore the architecture](docs/ARCHITECTURE.md) · [Meet the simulation](docs/SIMULATION.md) · [Understand the AI](docs/AI_AND_REPLAY.md) · [Run it locally](#run-it-locally)
 
 ## What you're looking at
 
-I like building things people can explore and understand. For this project, I wanted the portfolio itself to be the work: a functioning system you can interrupt, investigate, and play with.
+I wanted to give people something to do when they open my portfolio. Close a road while I’m making a delivery. Suggest a purchase I can’t afford yet. Follow one of the employees around. There’s a lot more to talk about when you can see the software doing something.
 
-So I built a world where a small founder grows a wholesale pickle business. Every delivery changes inventory. Every investment costs money. Employees have their own transport, wages, schedules, and wellbeing. Shipments have to arrive at a port and move to the workplace. A factory has to be negotiated, built, supplied, and operated. The cheerful little island has accounting.
+The business runs on finite supplies and earned money. Employees have their own vehicles, wages, schedules, and fatigue. When I buy stock, a shipment has to reach the port, get unloaded, and make it to the workplace. Buying a factory island means paying for construction and then supplying the factory.
 
-Visitors can let Brandon work, change priorities, queue investments, follow a courier, close routes, introduce setbacks, control the weather temporarily, and inspect what happened. The engineering view opens up the decisions, recorded outcomes, replay, and counterfactual branches.
+I care about those details. If you watch a crate move across the island, I want it to mean something happened to the inventory.
 
-The joke is the pickle empire. The engineering is the relationship between everything in it.
+You can let Brandon run the business on his own or step in. Change his priorities, queue an investment, introduce a shortage, or give him some terrible weather. The engineering view lets you inspect his decisions, replay the run, and try a different action from a saved checkpoint.
 
 ## The five-minute tour
 
 1. **Press Play.** A saved guest world begins its career. No account setup required.
 2. **Follow Brandon.** Watch him collect supplies, travel, enter a business, and hand over an actual order.
 3. **Open the business.** Inspect inventory, purchases, transport, production, crew, and customer reviews.
-4. **Cause a reasonable amount of trouble.** Close a bridge or introduce a shortage. See which legal choices remain.
+4. **Mess with the plan.** Close a bridge or introduce a shortage, then watch how he handles it.
 5. **Look under the hood.** Inspect the recorded controller choice, replay the run, or branch from an available decision checkpoint.
 
-Use 1×, 2×, 4×, or 8× playback. Faster playback changes simulated time; it does not mint free inventory. The tiny economy remains stubbornly interested in arithmetic.
+You can watch at 1×, 2×, 4×, or 8× speed. The same supply, money, and delivery rules apply at every speed.
 
 ![A captured development build showing the simulation, playback, achievements, setbacks, and world status](docs/images/simulation-interface.jpg)
 
-*Repository images are selected captures from local development builds. They show the visual direction and working interface; they are not a claim of a publicly deployed service or the exact layout of every later revision.*
+*These screenshots are from local development builds. The layout may differ a little from the current version.*
 
 ## What I built
 
@@ -63,9 +65,9 @@ flowchart LR
     Replay --> UI
 ```
 
-The engine owns the facts. The controller chooses among possible actions. The browser makes their consequences visible. That division lets the world be playful while keeping the accounting, ownership, and replay inspectable.
+I keep the business state on the server. Jev chooses from the actions the engine allows, and the browser renders what happens. That gives inventory, purchases, and saved history a single source of truth. It also means I can work on the animation without letting it change somebody’s balance.
 
-## The business is small. The consequences aren't.
+## From the garage to a factory island
 
 ```mermaid
 flowchart TD
@@ -87,25 +89,25 @@ flowchart TD
     Crew --> Retirement
 ```
 
-This includes finite imported stock, local production inputs, wages, business hours, breaks, customer patience, simulated reviews, fatigue, and recovery. The fleet expands from walking to a bike, van, rocket skates, sailboat, helicopter, jetpack, and teleporter. Yes, the business can afford a teleporter. No, it cannot pretend it already delivered the cargo.
+As the business grows, there’s more to manage: production inputs, wages, customer patience, breaks, and getting everyone home. The fleet includes a bike, van, rocket skates, sailboat, helicopter, jetpack, and teleporter. Each mode has its own movement and carrying rules, so buying one changes how deliveries work.
 
 Read [the simulation field guide](docs/SIMULATION.md) for the supply chain, delivery lifecycle, workweek, transport tradeoffs, hazards, and achievement model.
 
-## AI with a job description
+## What Jev does
 
-Jev answers a bounded question: **which currently legal action should Brandon take?**
+I ask Jev to choose **what Brandon should do next** from the actions the engine currently allows. I send it the operating context and those choices, then validate its response. Prices, stock, routes, and timing are calculated in code.
 
-It receives a compact operating context and explicit choices. Application code owns prices, stock, eligibility, routes, clock advancement, and consequences. Responses are validated. Missing configuration, timeout, invalid responses, uncertainty, and exhausted allowances lead to a visibly labeled rules fallback.
+If configuration is missing, the request times out, the response is invalid or uncertain, or the allowance runs out, the rules controller takes over. The interface labels that fallback so you can see which controller acted.
 
 The adapter reserves input-token allowance in SQLite before awaiting a provider response. Decisions record which controller acted. Saved lessons provide operating context from outcomes and feedback; this is persisted memory, not model retraining. Authored action cues explain the chosen activity, not private model reasoning.
 
-My favorite part of this boundary is that it makes the interesting question testable: what did the controller choose, and what actually happened afterward?
+I can look back at a choice and its result: did Brandon replenish stock, finish an order, or spend money on something that helped later? That’s what I wanted the decision inspector to show.
 
 [Read the AI, replay, and evaluation guide →](docs/AI_AND_REPLAY.md)
 
-## A miniature world with a real rendering problem
+## Building the 3D world
 
-The scene is authored in code. Named groups keep characters, vehicles, buildings, and props editable. A model exporter produces reusable GLB assets. A runtime optimization pass batches static geometry by material while moving actors remain independent.
+I build the scene in code, with named groups for characters, vehicles, buildings, and props. That lets me adjust the models and their animation together. The exporter creates reusable GLBs, and the browser batches static geometry by material to reduce draw calls. Moving actors stay separate.
 
 Rendering includes day/night transitions, environmental weather, animated water, shoreline treatment, articulated characters, vehicle effects, route overlays, camera follow, and a miniature visual treatment. Automatic weather can be temporarily overridden for 180 simulated minutes before returning to the natural front. Thunder is optional and defaults off; reduced-motion behavior is handled explicitly.
 
@@ -115,9 +117,11 @@ Rendering includes day/night transitions, environmental weather, animated water,
 
 ## Why this project represents me
 
-I enjoy the point where design and engineering have to agree. A road closure should change the route you see. A delivery animation should correspond to stock that actually moves. A beautiful factory should be something the business earned and built. An AI decision should have an inspectable contract. A saved world should survive a refresh.
+I get interested in details like where the van parks and whether Brandon gets back into the same van after a delivery. Those details pull me into the rest of the system: the route, the parked equipment, the cargo he’s carrying, and the point where he’s allowed to choose another task.
 
-This project gives me room to work across the whole product: interface design, simulation rules, procedural graphics, API design, persistence, AI integration, performance, testing, and deployment preparation. Each layer has a purpose the visitor can encounter.
+That’s a good example of how I work on this project. I start with something I want to see happen, then work through what the software needs to remember to make it happen properly.
+
+I’ve worked across the interface, procedural models, simulation rules, API, persistence, AI integration, and tests. Being able to follow a feature all the way through is a big part of why I wanted to build this.
 
 If you're reviewing my work, start with [the case study](docs/CASE_STUDY.md). It connects the visible experience to the technical decisions and their tradeoffs. If you want to read the code first, start at [`shared/engine.js`](shared/engine.js), then follow one delivery through the server and renderer.
 
@@ -153,13 +157,13 @@ cp .env.example .env
 | `npm run models` | Regenerate reusable GLB assets |
 | `npm run backup` | Create a consistent SQLite backup |
 
-## Evidence and honest boundaries
+## Tests and current limits
 
 Tests cover engine behavior, geometry, motion, provider handling, persistence, session isolation, API/SSE behavior, and browser interaction. The evaluator uses actual engine transitions and writes local results under `evidence/`.
 
 This public repository includes source, tests, selected screenshots, documentation, and CI configuration. Raw local captures, private worlds, provider configuration, and backups stay outside Git. Historical development notes are identified separately from the current verification guide.
 
-The deployment model is **one Node process with persistent SQLite storage**. Multi-replica coordination, a live public deployment, physical-device performance, and human playtest acceptance are separate work. A simulated pickle factory is also not a food-safety, agricultural, employment-law, or commercial fleet-planning system. The production clocks and economics are deliberately compressed game rules.
+I’ve prepared the app for **one Node process with persistent SQLite storage**. Public deployment, real-device performance, and human playtesting still need their own checks. The business uses invented prices and compressed production times; the [verification guide](docs/VERIFICATION.md) records the current results and limits.
 
 [Verification and reproducible checks](docs/VERIFICATION.md) · [Deployment and recovery](docs/DEPLOYMENT.md)
 
@@ -177,4 +181,4 @@ The deployment model is **one Node process with persistent SQLite storage**. Mul
 | [Deployment](docs/DEPLOYMENT.md) | Environment, persistent storage, container setup, backup, and recovery |
 | [Development history](docs/HISTORY.md) | Earlier briefs and implementation notes, with revision context |
 
-**Built by Brandon Douglas.** Tiny island. Large number of consequences.
+**Brandon Douglas** · [GitHub](https://github.com/bdouglas5)

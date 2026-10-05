@@ -1,4 +1,6 @@
-# Architecture and implementation decisions
+# How I put the app together
+
+I keep the simulation, provider requests, and saved worlds on the server. React handles the controls and panels, and Three.js renders the state it receives. Here’s where the pieces live and why I arranged them this way.
 
 ## Source map
 
@@ -25,37 +27,37 @@
 | `server/jev.js` | Provider contract, budget reservation, timeout, validation, and fallback |
 | `tests/` | Simulation, provider, persistence, HTTP, model-container, and browser verification |
 
-## Decision 1: Keep the world authoritative on the server
+## Server-owned world state
 
 The browser sends a small set of commands, not replacement inventory or character coordinates. The server validates commands and decides when an action is legal. This makes resource accounting, isolated guest worlds, persistence, and replay consistent. The browser interpolates successive positions for visual smoothness.
 
-A standalone browser simulation would be simpler to host, but would provide weaker evidence of backend implementation and could not enforce the private provider budget reliably.
+I chose this setup so purchases, guest ownership, saved history, and the private provider budget all go through the server. It means the browser needs to handle interpolation and network state, which is covered in the world and motion guide.
 
-## Decision 2: Give the model choices, not state mutation
+## Jev action selection
 
 Each Jev request asks one bounded action-selection question over an explicit legal set. The response cannot invent a new command or directly move inventory. Timeouts and uncertain/invalid responses use a labeled deterministic fallback. The low confidence threshold is an initial game-specific setting, not a calibrated quality claim; tune it only after measuring real task outcomes.
 
 Provider latency pauses simulation advancement for that run. This keeps the comparison about decisions rather than network speed; latency and usage are recorded separately. The UI distinguishes a pending decision from movement.
 
-## Decision 3: Snapshot replay, checkpoint branching
+## Replay frames and branch checkpoints
 
 A career continues until the fleet and upgraded workshop are complete and the retirement cash target is reached. Replays reconstruct recorded states without relying on repeating external model responses. Pre-decision checkpoints support substituting a legal action while retaining the original run. The last 360 ticks retain exact frames; older history uses a progressively coarser power-of-two sampling interval. This keeps the recent sequence detailed and older milestones reachable without unbounded storage. The replay slider shows the actual recorded tick, so sampled history is never represented as a complete frame-by-frame recording.
 
 This uses more storage than a command-only event log. The initial service limits retained runs to 1000, expires inactive sessions after seven days, and supports consistent backups. Decision checkpoints are retained for the decisions still exposed by the live inspector. New careers start at zero cash on foot; a version mismatch starts a new career while older saved runs remain on disk.
 
-## Decision 4: Original procedural assets with a runtime optimization pass
+## Procedural assets and runtime batching
 
 Buildings, bridges, vegetation, props, and Brandon are authored as named mesh groups. The exporter emits GLB assets from that editable structure. The browser separately combines static meshes by material to reduce draw calls; characters, customers, crates, barriers, boat, and clouds remain independent.
 
 The GLB exporter omits runtime canvas signage and the renderer's ocean/lighting. These are supplied by the application. The standalone character is exported at the origin and contains the base character; live carrying and walking behavior are driven by the application.
 
-## Decision 5: One deployment unit before distributed coordination
+## A single-process deployment
 
-One Node process owns active simulations and synchronous SQLite usage reservations. A persistent disk stores runs and budgets. This has a clear recovery model and a modest operational footprint for a portfolio demonstration.
+One Node process owns active simulations and synchronous SQLite usage reservations. A persistent disk stores runs and budgets. I can back up that disk and restore interrupted worlds as paused.
 
 Multiple replicas against one SQLite file are unsupported. Distributed deployment would require shared run ownership, transactional usage reservation, durable task coordination, and an appropriate database. The provided deployment package states this boundary explicitly.
 
-## Decision 6: Separate gameplay from engineering exposition
+## Gameplay and technical panels
 
 The default view explains the autonomous business and offers Play. Visitors can let it run, accelerate simulated time, choose the next investment, follow a courier, inspect customer reviews, or introduce a disruption. Day/night and weather are simulation state, so replay and every browser see the same conditions. Weather fronts automatically alternate among clear skies, clouds, rain, fog, and storms. Creative weather controls apply a saved override for 180 simulated minutes, then restore the natural front; visitors can also resume automatic weather early. Storms render distant lightning bolts, respect reduced motion, and optionally play delayed synthesized thunder after a browser interaction. Thunder sound defaults off. The optional inspector presents the exact choices and recorded outcomes. The engineering panel explains the system and offers a data export without exposing provider credentials or guest-session secrets.
 
@@ -82,7 +84,7 @@ sequenceDiagram
     Scene-->>Visitor: Visible consequences
 ```
 
-A request is not permission to replace the world. The server checks the guest's ownership and interprets a command through the engine. State presented to the renderer has already passed through the authoritative rules.
+The server checks which guest owns the run and applies each command through the engine. The renderer receives the resulting state after those checks.
 
 ## API surface
 
@@ -139,7 +141,7 @@ The diagram expresses logical relationships. `usage.session`, `current_run`, and
 
 State is stored as serialized simulation records. This favors inspectability and replay over a normalized table for every business object. A savepoint keeps related save operations consistent. WAL and the SQLite backup API support the operational model; they do not make simultaneous multi-process simulation ownership safe.
 
-## Boundaries worth reviewing
+## What each part is responsible for
 
 | Boundary | Guarantee supplied by the design | Separate concern |
 | --- | --- | --- |

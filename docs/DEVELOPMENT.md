@@ -41,11 +41,11 @@ Start with the state transition for a gameplay change. Define preconditions and 
 | `src/components/` | How does a feature communicate its purpose? |
 | `tests/` | What existing behavior must remain true? |
 
-## Verification matches the kind of change
+## Choosing checks
 
 A resource or action change needs engine checks that cover accounting and prerequisites. A provider change needs invalid-response, timeout, usage, and fallback checks. A persistence change needs save, restore, ownership, replay, and branch checks. A scene change needs geometry or motion checks where meaningful and a rendered browser review.
 
-Avoid tests that merely restate the implementation. The valuable test is one that catches an observable broken promise: stock appearing twice, someone else's run becoming readable, a branch mutating the original, a route missing its destination, or a courier receiving a vehicle they never bought.
+I look for tests that catch something a visitor would notice or a saved world couldn't recover from: duplicated stock, access to someone else's run, a branch overwriting the original, or a courier using a vehicle they never bought. Those checks tell me more than a test that repeats the implementation.
 
 `npm test` runs a build first. Browser tests use production servers and disposable databases; inspect their configuration for the relevant port and environment. Local scripts for captures and diagnostics may assume a running development server or specific local conditions. The supported entry points are the npm scripts in the README.
 
@@ -59,4 +59,4 @@ Avoid tests that merely restate the implementation. The valuable test is one tha
 
 Can someone see why an action happened? Does the destination agree with the route? Is a setback understandable? Does the world recover? Can a person choose another speed, inspect the evidence, and resume after refresh?
 
-The code and the interface should answer the same question. That is the standard this project is trying to meet.
+I use those questions when reviewing my changes. They help me catch the gap between a rule working in a test and someone being able to understand it in the browser.
