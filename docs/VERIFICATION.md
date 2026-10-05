@@ -6,7 +6,22 @@ The project contains multiple kinds of evidence. A build, an engine test, a brow
 
 ## Publication checks — October 5, 2026
 
-The documentation publication is being checked against the current source. Final results are recorded below before the publication commit is completed.
+| Publication check | Result |
+| --- | --- |
+| Procedural model export and production build | Passed through the `npm test` prebuild |
+| Focused AI, store, decision-trace, weather, shipment, shift-clock, and navigation checks | **34 passed, zero failed** |
+| Deterministic career evaluation | **Eight of eight completed**: four seeds, unattended and disrupted |
+| Documentation links | All relative Markdown links in the README and top-level docs resolve to published source or assets |
+| Public source review | Private configuration, local databases, backups, dependencies, generated models, and raw captures excluded |
+| Node suite excluding the HTTP/SSE career endurance test | **301 passed, one failed**; pacing test passed on standalone rerun |
+| Full `npm test` endurance run | Stopped before the long HTTP/SSE career completed; incomplete |
+| Browser suite, live provider, and hosted application acceptance | Not rerun for this documentation publication |
+
+The broader run encountered a pacing assertion: 61% of sampled frames advanced one tick, below its expected proportion. A standalone rerun of `tests/live-pacing.test.js` passed. That rerun does not erase the broader failure.
+
+The broader run completed 302 checks in approximately 180 seconds. A separate full `npm test` run remained in its long production HTTP/SSE career and was stopped before completion. No complete-suite pass is claimed. These runtime verification limits are separate from the successful documentation, build, focused checks, and deterministic evaluations.
+
+The eight rules careers completed at 71,313–90,903 simulated ticks, with 2,504–2,535 coins, seven owned vehicles, and all eleven catalog gadgets present. These figures come from this publication run. They describe engine outcomes, not GPU performance or a live AI benchmark.
 
 ## Run the checks
 
