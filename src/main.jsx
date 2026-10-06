@@ -703,6 +703,7 @@ function App() {
           loading={loading}
           busy={busy}
           canStart={!!run && !history}
+          jevConfigured={!!run?.jevConfigured}
           onAchievements={() => {
             closeIntro();
             setPanel("achievements");
