@@ -30,6 +30,7 @@ import {
   AlertCircle,
 } from "./icons.js";
 const EmpireConsole = lazy(() => import("./components/EmpireConsole.jsx"));
+import { frameBus } from "./frame-bus.js";
 const Island = lazy(() => import("./Island.jsx"));
 import { ACTIONS, fresh } from "../shared/engine.js";
 import "@fontsource-variable/dm-sans";
@@ -208,7 +209,9 @@ function App() {
     setConnection("connecting");
     const es = new EventSource(`/api/runs/${run.id}/events`);
     es.onmessage = (e) => {
-      setRun(JSON.parse(e.data));
+      const next = JSON.parse(e.data);
+      frameBus.push(next.id, next.state);
+      setRun(next);
       setConnection("connected");
     };
     es.onerror = () => setConnection("reconnecting");
@@ -440,6 +443,7 @@ function App() {
             <Suspense fallback={<IslandPlaceholder />}>
               <Island
                 state={state}
+                liveFeed={!history && !!run?.state}
                 notificationScope={`${run?.id || "preview"}:${history ? `replay-${replay}` : "live"}`}
                 businessOpen={panel === "business"}
                 onSelect={() => {

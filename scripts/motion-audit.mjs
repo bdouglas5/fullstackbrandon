@@ -25,7 +25,7 @@ const stepOnce = () => {
 };
 let wall = 0, nextStep = 0, snap = clone(s);
 // Per-channel history for velocity-discontinuity detection (units/s).
-const ch = {}; const veh = {};
+const crewMotion = {}; const desync = {}; const ch = {}; const veh = {};
 function watch(name, x, z, ctx) {
   const c = (ch[name] ||= { x, z, v: null, still: 0, stillStart: 0 });
   const d = Math.hypot(x - c.x, z - c.z), v = d / FRAME;
@@ -51,8 +51,15 @@ for (; wall < seconds; wall += FRAME) {
   const p = motion.position;
   const mode = (b.mountedMode || "foot") + (b.transition ? "*" : "") + (b.vehicleApproach ? "~" : "") + (b.buildingVisit ? "B" : "");
   const ctx = { mode, action: b.action, moving: !!b.move && !b.buildingVisit };
-  if (dbg && wall >= dbg[0] && wall <= dbg[1] && true) console.log(wall.toFixed(2), "latest", snap.tick, "play", live.playTick.toFixed(2), "shownTick", motion.shownTick.toFixed(2), "pos", p.x.toFixed(2), p.z.toFixed(2), "mode", mode, "veh", shown.vehicle, "vl", JSON.stringify(shown.vehicleLocations?.bike?.position), "move", b.move?`${b.move.from}>${b.move.to}${b.move.docking?"D":""}`:"-", "act", b.action);
+  if (dbg && wall >= dbg[0] && wall <= dbg[1] && true) console.log(wall.toFixed(2), "latest", snap.tick, "play", live.playTick.toFixed(2), "shownTick", motion.shownTick.toFixed(2), "pos", p.x.toFixed(2), p.z.toFixed(2), "mode", mode, "veh", shown.vehicle, "vl", JSON.stringify(shown.vehicleLocations?.bike?.position), "vanvl", JSON.stringify(shown.vehicleLocations?.van?.position), "move", b.move?`${b.move.from}>${b.move.to}${b.move.docking?"D":""}`:"-", "act", b.action);
   watch("brandon", p.x, p.z, ctx);
+  { const e = Math.hypot(p.x - b.position[0], p.z - b.position[1]); if (e > 0.25 * speed + 1 && !b.voyage && !b.buildingVisit) { if (!desync.on) { desync.on = true; events.push({ t: wall.toFixed(2), tick: snap.tick, kind: "DESYNC", ch: "brandon", d: e.toFixed(2), shown: motion.shownTick.toFixed(1), ...ctx }); } } else desync.on = false; }
+  for (const m of snap.crew || []) {
+    const cm = (crewMotion[m.id] ||= new ActorMotion({ clock: live }));
+    cm.update(m, snap, FRAME);
+    const shownCrew = (live.at(cm.shownTick, snap).crew || []).find((c) => c.id === m.id) || m;
+    watch(m.id, cm.position.x, cm.position.z, { mode: (shownCrew.mountedMode || "foot") + (shownCrew.transition ? "*" : ""), action: shownCrew.action, moving: !!shownCrew.move });
+  }
   // Vehicle meshes, as Island.jsx places them: ridden = motion pose, else parked.
   const transport = b.mountedMode ?? shown.vehicle;
   for (const kind of ["bike", "van"]) {
@@ -60,8 +67,11 @@ for (; wall < seconds; wall += FRAME) {
     const parked = (b.move?.docking && kind === shown.vehicle ? b.roadVehiclePosition : null) || shown.vehicleLocations?.[kind]?.position || (kind === "van" ? shown.parkedVan?.position : null) || [5.5, 3.15];
     // Mirror Island.jsx park(): ease into the parked spot, snap only for big jumps.
     const vs = (veh[kind] ||= { x: parked[0], z: parked[1] });
-    if (transport === kind) { vs.x = p.x; vs.z = p.z; }
-    else if (Math.hypot(parked[0] - vs.x, parked[1] - vs.z) > 4) { vs.x = parked[0]; vs.z = parked[1]; }
+    if (transport === kind) {
+      if (!vs.driving) { const dx = vs.x - p.x, dz = vs.z - p.z, g = Math.hypot(dx, dz); vs.hx = g < 8 ? dx : 0; vs.hz = g < 8 ? dz : 0; vs.driving = true; }
+      const k = Math.exp(-FRAME / 0.16); vs.hx *= k; vs.hz *= k; vs.x = p.x + vs.hx; vs.z = p.z + vs.hz;
+    }
+    else if (vs.driving = false, Math.hypot(parked[0] - vs.x, parked[1] - vs.z) > 8) { vs.x = parked[0]; vs.z = parked[1]; }
     else { const k = 1 - Math.exp(-FRAME / 0.14); vs.x += (parked[0] - vs.x) * k; vs.z += (parked[1] - vs.z) * k; }
     const pos = [vs.x, vs.z];
     watch(kind, pos[0], pos[1], { ...ctx, moving: ctx.moving && transport === kind });

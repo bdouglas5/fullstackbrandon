@@ -1078,23 +1078,36 @@ export function transportTransitionPose(transition) {
   const exit = from !== "foot",
     enter = to !== "foot";
   const phase = p < 0.35 ? "dismount" : p < 0.7 ? "approach" : "board";
+  // The figure steps aside, then settles back onto the pose it will walk or
+  // ride from, so the end of the transition is continuous in place and facing.
+  const settle = 1 - smooth((p - 0.8) / 0.2);
   const offset =
     exit && p < 0.35
       ? smooth(p / 0.35)
       : enter && p > 0.7
         ? 1 - smooth((p - 0.7) / 0.3)
-        : 1;
+        : enter
+          ? smooth(p / 0.2)
+          : 1;
+  // Facing: quarter turn toward the step, flipping smoothly between phases.
+  const flip = smooth((p - 0.62) / 0.16);
+  const yawOffset =
+    (Math.PI / 2 + (-Math.PI / 2 - Math.PI / 2) * flip) *
+    smooth(p / 0.12) *
+    settle;
   return {
     from,
     to,
     phase,
     progress: p,
-    offset: 0.86 * offset,
+    offset: 0.86 * offset * (exit ? settle : 1),
+    yawOffset,
     walking: p > 0.2 && p < 0.8,
     standing: true,
   };
 }
 const transitionMotion = new WeakMap();
+const transitionLeftover = new WeakMap();
 export function applyTransportTransition(
   rig,
   actor,
@@ -1110,8 +1123,21 @@ export function applyTransportTransition(
   const transition = actor.transition;
   if (!transition) {
     transitionMotion.delete(rig);
+    // The server may finish the transition before the figure has: bleed off
+    // whatever sideways offset is left instead of snapping it away.
+    const left = transitionLeftover.get(rig);
+    if (left) {
+      const k = Math.exp(-Math.min(dt, 0.1) / 0.1);
+      left[0] *= k;
+      left[1] *= k;
+      const root = rig.group || rig.brandon;
+      root.position.x += left[0];
+      root.position.z += left[1];
+      if (Math.hypot(left[0], left[1]) < 0.002) transitionLeftover.delete(rig);
+    }
     return null;
   }
+  transitionLeftover.delete(rig);
   const key = `${transition.startedAt}:${transition.from}:${transition.to}`;
   let visual = transitionMotion.get(rig);
   const increment = 1 / (transition.duration || 4);
@@ -1119,9 +1145,7 @@ export function applyTransportTransition(
     visual = {
       key,
       progress:
-        active && !reducedMotion
-          ? Math.max(0, transition.progress - increment)
-          : transition.progress,
+        active && !reducedMotion ? 0 : transition.progress,
     };
     transitionMotion.set(rig, visual);
   }
@@ -1150,17 +1174,15 @@ export function applyTransportTransition(
   ])
     if (pilot) pilot.visible = false;
   const heading = motion.heading;
-  bodyRoot.position
-    .copy(motion.position)
-    .add(
-      new THREE.Vector3(
-        -Math.cos(heading) * pose.offset,
-        0,
-        Math.sin(heading) * pose.offset,
-      ),
-    );
-  bodyRoot.rotation.y =
-    heading + (pose.phase === "board" ? -Math.PI / 2 : Math.PI / 2);
+  const side = [
+    -Math.cos(heading) * pose.offset,
+    Math.sin(heading) * pose.offset,
+  ];
+  bodyRoot.position.copy(motion.position);
+  bodyRoot.position.x += side[0];
+  bodyRoot.position.z += side[1];
+  transitionLeftover.set(rig, [side[0], side[1]]);
+  bodyRoot.rotation.y = heading + pose.yawOffset;
   animateCharacter(
     body,
     { ...motion, walkCycle: time * 7 },

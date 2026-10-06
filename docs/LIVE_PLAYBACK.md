@@ -56,14 +56,46 @@ from the frame at Brandon's `shownTick` (crew use their own).
 Resting no longer relocates a vehicle that Brandon has already dismounted
 from. A vehicle still under him is driven into the bay over the parking ticks.
 
+## Every frame reaches the renderer (`src/frame-bus.js`)
+
+React batches state updates, so two frames landing close together used to
+render as one and the playout clock never saw the first. `main.jsx` now also
+pushes every SSE frame into `frameBus`; `Island.jsx` drains it each animation
+frame, feeding `LiveClock` and every `ActorMotion` the intermediate frames in
+order (with `dt = 0`) before the newest one. Replays do not read the bus.
+
+## Smooth seams
+
+- **Road legs** (`shared/engine.js`): a leg that starts off the road line
+  (leaving a bay, door or yard) starts with negative progress for the along-road
+  part and a `move.offset` that fades for the sideways part, instead of
+  snapping onto the line. Docking steps are capped to walking pace.
+- **Parked vehicles** (`Island.jsx` `park` / `drive`): the mesh eases into its
+  bay when the rider steps off and blends from the bay to the rider's pose on
+  mount (snapping only past 8 units, e.g. replay scrubs).
+- **Mount / dismount figure** (`world-realism.js`): sideways offset and facing
+  ease back to the pose at the end of the transition; any offset left when the
+  server finishes first bleeds off over about 0.1 s.
+- **Drawn route** (`world-motion.js` `movementPoints`): only road still ahead of
+  the pose and short of the destination is drawn, so the path never detours back
+  to a node already passed.
+- **Hairpins** (`ActorMotion.nextCusp`): the follower brakes into a reversal or
+  a tight turn on the queued path instead of carrying speed through it.
+- **Stops**: the follower never carries more speed than the spring can shed
+  before the playout point, and braking is ramped.
+
 ## Checking it
 
 ```
 node scripts/motion-audit.mjs <speed> <seconds> stream <jitterSeconds>
 node scripts/sim-audit.mjs <ticks> <seed>
+node scripts/live-probe.mjs http://localhost:3000 <speed> <seconds>
 node --test tests/live-clock.test.js tests/live-pacing.test.js
 ```
 
+`live-probe` drives the real server in headless Chrome (needs the app running)
+and reports frame gaps, per-frame pops of Brandon and vehicles, and
+screen-space acceleration spikes.
 `motion-audit` runs the real engine and real motion code at 60 fps with
 network jitter and counts velocity jumps, stalls and teleports per channel
 (Brandon, bike, van). `sim-audit` checks the authoritative frames for

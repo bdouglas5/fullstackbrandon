@@ -499,7 +499,8 @@ export function buildWeaponProps() {
 
 // Rounded box mesh with the kit's usual soft toy edges.
 class RoundedBoxMesh extends THREE.Mesh {
-  constructor(x, y, z, color) {
+  // Defaults keep Mesh.clone() (which calls this with no arguments) cheap.
+  constructor(x = 1, y = 1, z = 1, color = 0xffffff) {
     super(
       new RoundedBoxGeometry(x, y, z, 2, Math.min(x, y, z) * 0.35),
       mat(color),

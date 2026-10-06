@@ -50,6 +50,7 @@ import {
 import { createVehicleEffects } from "./world-effects.js";
 import { createRouteOverlay } from "./route-overlay.js";
 import { setCrewTransportVisibility } from "./world-details.js";
+import { frameBus } from "./frame-bus.js";
 import {
   updateBusinessWorld,
   animateTireRepair,
@@ -62,6 +63,7 @@ import {
 } from "./order-notifications.js";
 export default function Island({
   state,
+  liveFeed = false,
   businessOpen = false,
   showOrderLabels = true,
   onSelect,
@@ -110,6 +112,7 @@ export default function Island({
   const host = useRef(),
     labels = useRef([]),
     data = useRef(state),
+    feedLive = useRef(liveFeed),
     select = useRef(onSelect),
     controller = useRef(),
     following = useRef(false),
@@ -142,6 +145,7 @@ export default function Island({
   const orderNoticesRef = useRef(islandNotices);
   orderNoticesRef.current = islandNotices;
   data.current = state;
+  feedLive.current = liveFeed;
   selectedTarget.current = followTarget;
   followCallback.current = onFollowTargetChange;
   following.current = follow;
@@ -519,12 +523,24 @@ export default function Island({
       const dt = Math.min((time - lastRenderTime) / 1000, 0.1);
       lastRenderTime = time;
       previous = time - ((time - previous) % frameInterval);
-      const latest = data.current;
+      let latest = data.current;
+      // Frames React batched away still reach the playout clock, in order.
+      const queued = frameBus.drain();
+      if (!feedLive.current) queued.length = 0;
+      if (queued.length && (!latest || (queued.at(-1).tick ?? 0) >= (latest.tick ?? 0)))
+        latest = queued.pop();
       const t = reducedMotion ? 0 : time / 1000;
       // Everything below is drawn from one moment: the frame that was true at
       // the clock's displayed time. Newest frames only feed the playout.
       let s = latest;
       if (latest) {
+        for (const older of queued) {
+          if ((older.tick ?? 0) <= live.latest || older === lastFrame) continue;
+          live.push(older);
+          motionFor("brandon").update(older.brandon, older, 0, reducedMotion);
+          for (const member of older.crew || [])
+            motionFor(member.id).update(member, older, 0, reducedMotion);
+        }
         if (latest !== lastFrame) {
           live.push(latest);
           lastFrame = latest;
@@ -588,12 +604,13 @@ export default function Island({
             s.vehicleLocations?.[kind]?.position ||
             object.userData.parkedPosition ||
             p;
+          object.userData.driving = false;
           // Settle into the bay instead of popping there when the rider steps off.
           const gap = Math.hypot(
             parked[0] - object.position.x,
             parked[1] - object.position.z,
           );
-          if (!object.userData.parkedSeen || gap > 4) {
+          if (!object.userData.parkedSeen || gap > 8) {
             object.position.set(parked[0], groundY, parked[1]);
             object.userData.parkedSeen = true;
           } else {
@@ -604,9 +621,26 @@ export default function Island({
               object.position.z + (parked[1] - object.position.z) * k,
             );
           }
+          object.userData.lastX = object.position.x;
+          object.userData.lastZ = object.position.z;
         };
         const drive = (object) => {
           setPose(object);
+          // Hand over from the bay to the rider over a moment, not a pop.
+          const u = object.userData;
+          if (!u.driving) {
+            const dx = object.userData.lastX - motion.position.x,
+              dz = object.userData.lastZ - motion.position.z;
+            const gap = Math.hypot(dx, dz);
+            u.handX = gap > 0 && gap < 8 ? dx : 0;
+            u.handZ = gap > 0 && gap < 8 ? dz : 0;
+            u.driving = true;
+          }
+          const k = Math.exp(-Math.min(dt, 0.1) / 0.16);
+          u.handX *= k;
+          u.handZ *= k;
+          object.position.x += u.handX;
+          object.position.z += u.handZ;
           object.userData.parkedPosition = [
             motion.position.x,
             motion.position.z,
@@ -1590,6 +1624,7 @@ export default function Island({
           motions.clear();
           shoreMotions.clear();
           live.reset(0);
+          frameBus.clear();
           lastFrame = null;
           suspended = false;
         }
