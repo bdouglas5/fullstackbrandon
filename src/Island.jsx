@@ -527,7 +527,10 @@ export default function Island({
       // Frames React batched away still reach the playout clock, in order.
       const queued = frameBus.drain();
       if (!feedLive.current) queued.length = 0;
-      if (queued.length && (!latest || (queued.at(-1).tick ?? 0) >= (latest.tick ?? 0)))
+      if (
+        queued.length &&
+        (!latest || (queued.at(-1).tick ?? 0) >= (latest.tick ?? 0))
+      )
         latest = queued.pop();
       const t = reducedMotion ? 0 : time / 1000;
       // Everything below is drawn from one moment: the frame that was true at
@@ -1542,6 +1545,20 @@ export default function Island({
         el.style.opacity = p.z > 1 || !nearby ? "0" : "1";
         el.style.visibility = p.z > 1 || !nearby ? "hidden" : "visible";
       });
+      // On phone-sized stages keep anchored labels clear of the control rows.
+      const narrow = host.current.clientWidth < 600;
+      const fit = (x, y) =>
+        narrow
+          ? [
+              Math.min(Math.max(x, 80), host.current.clientWidth - 80),
+              Math.min(
+                Math.max(y, 215),
+                host.current.clientHeight -
+                  (host.current.clientHeight > 480 ? 150 : 120),
+              ),
+            ]
+          : [x, y];
+      let workplacePx = null;
       if (workplaceAnchor.current && s) {
         const origin = s.operations?.origin || "home";
         const anchor =
@@ -1559,8 +1576,12 @@ export default function Island({
           anchor.z <= 1 &&
           Math.abs(anchor.x) < 1.15 &&
           Math.abs(anchor.y) < 1.15;
-        workplaceAnchor.current.style.left = `${(anchor.x * 0.5 + 0.5) * host.current.clientWidth}px`;
-        workplaceAnchor.current.style.top = `${(-anchor.y * 0.5 + 0.5) * host.current.clientHeight}px`;
+        workplacePx = fit(
+          (anchor.x * 0.5 + 0.5) * host.current.clientWidth,
+          (-anchor.y * 0.5 + 0.5) * host.current.clientHeight,
+        );
+        workplaceAnchor.current.style.left = `${workplacePx[0]}px`;
+        workplaceAnchor.current.style.top = `${workplacePx[1]}px`;
         workplaceAnchor.current.style.visibility = visible
           ? "visible"
           : "hidden";
@@ -1576,8 +1597,20 @@ export default function Island({
           1.6,
           SHORELINE.position[1],
         ).project(camera);
-        shorelineAnchor.current.style.left = `${(anchor.x * 0.5 + 0.5) * host.current.clientWidth}px`;
-        shorelineAnchor.current.style.top = `${(-anchor.y * 0.5 + 0.5) * host.current.clientHeight}px`;
+        const shorePx = fit(
+          (anchor.x * 0.5 + 0.5) * host.current.clientWidth,
+          (-anchor.y * 0.5 + 0.5) * host.current.clientHeight,
+        );
+        if (
+          narrow &&
+          workplacePx &&
+          Math.abs(shorePx[0] - workplacePx[0]) < 130 &&
+          Math.abs(shorePx[1] - workplacePx[1]) < 40
+        ) {
+          shorePx[1] = workplacePx[1] - 44;
+        }
+        shorelineAnchor.current.style.left = `${shorePx[0]}px`;
+        shorelineAnchor.current.style.top = `${shorePx[1]}px`;
         shorelineAnchor.current.style.visibility =
           anchor.z <= 1 && Math.abs(anchor.x) < 1.1 && Math.abs(anchor.y) < 1.1
             ? "visible"
@@ -1973,7 +2006,8 @@ export default function Island({
           aria-pressed={workplacePinned}
           onClick={() => setWorkplacePinned((value) => !value)}
         >
-          ⌂ Workplace stats {workplacePinned ? "on" : "off"}
+          ⌂ <span className="tool-long">Workplace </span>stats{" "}
+          {workplacePinned ? "on" : "off"}
         </button>
       )}
       {!failed && (

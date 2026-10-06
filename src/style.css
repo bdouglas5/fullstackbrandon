@@ -4952,3 +4952,198 @@ button:hover:not(:disabled) {
   display: block;
   margin-top: 8px;
 }
+
+/* Phone layout: one predictable stack instead of per-element bottom offsets.
+   Bottom dock = [Brandon card | Brain | Business], play card above it,
+   quick toggles (follow, workplace stats) in a column under the camera reset. */
+@media (max-width: 800px) {
+  .world-panel .world-bottom {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .world-panel .world-bottom .brandon-card {
+    min-width: 0;
+    max-width: none;
+    min-height: 48px;
+  }
+  .world-panel .world-bottom .brandon-card > svg {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .world-panel .world-bottom .brain-button,
+  .world-panel .world-bottom .business-launch {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .world-panel .world-bottom .business-launch {
+    padding: 0 14px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  .world-panel .world-bottom .business-launch span,
+  .world-panel .world-bottom .orbit-hint {
+    display: none;
+  }
+  .world-panel .mobile-play {
+    bottom: 68px;
+    left: 12px;
+    right: 12px;
+  }
+  .world-panel .mobile-play > span {
+    min-width: 0;
+  }
+  .world-panel .mobile-play b {
+    max-width: none;
+  }
+  .world-panel .scene-tools {
+    top: 92px;
+    right: 12px;
+    align-items: flex-end;
+  }
+  .world-panel .follow-button,
+  .world-panel .workplace-toggle,
+  .world-panel .atlas-button {
+    position: absolute;
+    bottom: auto;
+    top: 132px;
+    min-height: 38px;
+    padding: 0 13px;
+    font-size: 12px;
+  }
+  .world-panel .follow-button {
+    left: 12px;
+    right: auto;
+  }
+  .world-panel .workplace-toggle {
+    left: 148px;
+    right: auto;
+  }
+  .world-panel .tool-long {
+    display: none;
+  }
+  .world-panel .atlas-button {
+    right: 12px;
+    top: 176px;
+  }
+}
+@media (max-width: 480px) {
+  .world-panel .world-bottom .brandon-card {
+    padding: 8px 10px;
+  }
+  .world-panel .world-bottom .business-launch {
+    padding: 0 11px;
+    font-size: 11px;
+  }
+  .world-panel .world-bottom .business-launch svg {
+    display: none;
+  }
+  .world-panel .mobile-play {
+    flex-wrap: nowrap;
+  }
+}
+@media (max-width: 600px) {
+  /* Floating world labels crowd a phone-sized stage; keep the interactive ones compact. */
+  .world-panel .map-label:not(.character-label) {
+    display: none;
+  }
+  .world-panel .shoreline-marker small,
+  .world-panel .workplace-marker .workplace-stock-count {
+    display: none;
+  }
+}
+
+/* Phone polish: welcome dialog, safe areas, touch targets. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (max-width: 800px) {
+  .app-shell {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .topbar nav button,
+  .about-link {
+    min-height: 40px;
+  }
+}
+@media (max-width: 560px) {
+  .help-modal.welcome-dialog {
+    width: calc(100vw - 20px);
+    padding: 18px 16px 16px;
+    max-height: calc(100dvh - 20px);
+    border-radius: 22px;
+  }
+  .welcome-heading {
+    margin-bottom: 12px;
+    padding-right: 34px;
+  }
+  .welcome-heading .welcome-portrait {
+    width: 56px;
+    height: 68px;
+    border-radius: 14px;
+  }
+  .welcome-heading h2 {
+    font-size: 22px;
+    margin-top: 5px;
+  }
+  .welcome-dialog .welcome-content {
+    padding-right: 2px;
+  }
+  .welcome-dialog .welcome-content p,
+  .welcome-dialog .intro-lead {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 11px;
+  }
+  .welcome-dialog .welcome-note-text {
+    font-size: 11px;
+  }
+  .welcome-loop {
+    margin-bottom: 11px;
+  }
+  .welcome-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding-top: 12px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .welcome-actions .primary-button,
+  .welcome-actions .secondary-button {
+    width: 100%;
+    min-height: 46px;
+    justify-content: center;
+  }
+  .welcome-actions .secondary-button {
+    min-height: 40px;
+  }
+  .close-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+@media (max-width: 800px) {
+  .drawer,
+  .drawer.wide {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    top: max(8px, env(safe-area-inset-top));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    padding: 20px 18px;
+    border-radius: 22px;
+    overscroll-behavior: contain;
+  }
+}
