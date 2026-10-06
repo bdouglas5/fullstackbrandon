@@ -6,6 +6,21 @@ function world() {
   let id = 0;
   return new BrowserWorld({ uuid: () => `world-${++id}`, tickMs: 10 });
 }
+test("fast-forward batches display updates while retaining intermediate replay ticks", () => {
+  const local = world(),
+    run = local.request("/runs", {});
+  local.request(`/runs/${run.id}/command`, { type: "speed", value: 8 });
+  local.request(`/runs/${run.id}/command`, { type: "start" });
+  const frames = [];
+  local.pump(0, (frame) => frames.push(frame));
+  local.pump(10, (frame) => frames.push(frame));
+  assert.equal(frames.length, 1);
+  assert.equal(frames[0].state.tick, 8);
+  assert.deepEqual(
+    local.request(`/runs/${run.id}/history`).map(({ tick }) => tick),
+    [0, 1, 2, 3, 4, 5, 6, 7, 8],
+  );
+});
 test("fresh browser visitor uses rules, progresses at selected pace, and conserves money and stock", () => {
   const local = world();
   assert.equal(local.request("/session").run, null);

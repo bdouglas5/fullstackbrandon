@@ -241,6 +241,9 @@ export class BrowserWorld {
       8 + simulationSpeed(record.state),
       this.credit + (elapsed / this.tickMs) * simulationSpeed(record.state),
     );
+    // Match the server's playout contract: ordinary movement emits every tick;
+    // fast-forward/rest batches emit the newest state to avoid flooding the UI.
+    const every = Math.floor(this.credit) <= 4;
     while (this.credit >= 1 && record.state.status === "running") {
       if (decisionReady(record.state)) {
         const before = clone(record.state);
@@ -253,7 +256,8 @@ export class BrowserWorld {
       step(record.state);
       this.credit -= 1;
       this.saveFrame(record);
-      emit(this.envelope(record));
+      if (every || this.credit < 1 || record.state.status !== "running")
+        emit(this.envelope(record));
     }
   }
 }
