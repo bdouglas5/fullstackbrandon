@@ -37,21 +37,9 @@ import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/manrope";
 import "./style.css";
 import { lockPageGestures } from "./page-gestures.js";
-async function api(path, body) {
-  const r = await fetch("/api" + path, {
-    method: body ? "POST" : "GET",
-    headers: body
-      ? {
-          "Content-Type": "application/json",
-          "X-Little-Worlds": "1",
-        }
-      : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const d = await r.json();
-  if (!r.ok) throw new Error(d.error || "Could not reach the island.");
-  return d;
-}
+import { api, subscribe } from "./game-client.js";
+const defaultController =
+  import.meta.env.VITE_BROWSER_SIMULATION === "true" ? "rules" : "jev";
 const fmt = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
 function IslandPlaceholder() {
   return (
@@ -68,7 +56,7 @@ function IslandPlaceholder() {
 
 function App() {
   useEffect(() => lockPageGestures(), []);
-  const [preview] = useState(() => fresh(42, "jev"));
+  const [preview] = useState(() => fresh(42, defaultController));
   const [followTarget, setFollowTarget] = useState("brandon");
   const [run, setRun] = useState(null),
     [loading, setLoading] = useState(true),
@@ -83,7 +71,7 @@ function App() {
     [reduced] = useState(
       () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     ),
-    [controller, setController] = useState("jev");
+    [controller, setController] = useState(defaultController);
   const [brainOpen, setBrainOpen] = useState(false);
   const brainButton = useRef(null);
   const closeBrain = () => {
@@ -172,6 +160,9 @@ function App() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    if (run?.storageWarning) notify(new Error(run.storageWarning));
+  }, [run?.storageWarning]);
   function notify(e) {
     setError(e.message || String(e));
     clearTimeout(errorTimer.current);
@@ -185,7 +176,7 @@ function App() {
         let r = d.run;
         if (!r)
           r = await api("/runs", {
-            controller: "jev",
+            controller: defaultController,
           });
         if (r.state.status === "running")
           r = await api(`/runs/${r.id}/command`, { type: "pause" });
@@ -207,15 +198,16 @@ function App() {
   useEffect(() => {
     if (!run?.id) return;
     setConnection("connecting");
-    const es = new EventSource(`/api/runs/${run.id}/events`);
-    es.onmessage = (e) => {
-      const next = JSON.parse(e.data);
-      frameBus.push(next.id, next.state);
-      setRun(next);
-      setConnection("connected");
-    };
-    es.onerror = () => setConnection("reconnecting");
-    return () => es.close();
+    const close = subscribe(
+      run.id,
+      (next) => {
+        frameBus.push(next.id, next.state);
+        setRun(next);
+        setConnection("connected");
+      },
+      setConnection,
+    );
+    return close;
   }, [run?.id]);
   function openBusiness() {
     document
@@ -239,7 +231,7 @@ function App() {
       setBusy(false);
     }
   }
-  async function restart(next = "jev") {
+  async function restart(next = defaultController) {
     setBusy(true);
     try {
       const r = await api("/runs", {
@@ -250,7 +242,7 @@ function App() {
       setHistory(null);
 
       setFollowTarget("brandon");
-      setController(next);
+      setController(r.state.controller);
       setPanel(null);
       setIntro(true);
       return r;

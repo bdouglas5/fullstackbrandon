@@ -9,6 +9,8 @@ import {
   ArrowUpRight,
 } from "../icons.js";
 
+import { downloadRun } from "../game-client.js";
+
 const SYSTEMS = [
   [
     Layers,
@@ -38,7 +40,9 @@ const SYSTEMS = [
   [
     ShieldCheck,
     "Built for continuity",
-    "Private sessions, validated commands, live server events, and SQLite persistence keep the interface and business in sync. Bounded AI usage and a deterministic fallback keep the world moving when a provider is slow or unavailable.",
+    import.meta.env.VITE_BROWSER_SIMULATION === "true"
+      ? "Each visit owns a local simulation worker. IndexedDB preserves progress across refreshes, with replay and decision checkpoints. The rules controller runs without a provider or remote game server."
+      : "Private sessions, validated commands, live server events, and SQLite persistence keep the interface and business in sync. Bounded AI usage and a deterministic fallback keep the world moving when a provider is slow or unavailable.",
   ],
 ];
 
@@ -121,10 +125,11 @@ export default function EngineeringPanel({ run, state }) {
       <details className="source-map">
         <summary>Engineering & verification</summary>
         <p>
-          React and Three.js render the world. Node and Express own simulation
-          commands and live updates. SQLite stores private runs, frames,
-          decision checkpoints, and provider usage. Static mesh batching and
-          instanced townspeople reduce scene overhead.
+          React and Three.js render the world.{" "}
+          {run?.storageMode === "browser"
+            ? "A browser worker runs the simulation and IndexedDB saves this visit’s progress, replay frames, and decision checkpoints."
+            : "Node and Express own simulation commands and live updates. SQLite stores private runs, frames, decision checkpoints, and provider usage."}{" "}
+          Static mesh batching and instanced townspeople reduce scene overhead.
         </p>
         <p>
           Automated checks cover inventory and money accounting, routes, vehicle
@@ -165,15 +170,20 @@ tests/                  → engine, server & browser verification`}</pre>
       <p className="muted">
         {run?.jevConfigured
           ? "An AI connection is configured for this server."
-          : "This server is currently running with the deterministic decision controller."}{" "}
+          : run?.storageMode === "browser"
+            ? "This world runs entirely in your browser with the rules controller."
+            : "This server is currently running with the deterministic decision controller."}{" "}
         The same business rules apply to both controllers.
       </p>
       <div className="drawer-actions">
         {run && (
-          <a className="secondary-button" href={`/api/runs/${run.id}/export`}>
+          <button
+            className="secondary-button"
+            onClick={() => downloadRun(run.id)}
+          >
             <Download size={16} />
             Download this run
-          </a>
+          </button>
         )}
         <a
           className="secondary-button"
