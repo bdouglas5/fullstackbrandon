@@ -8,6 +8,7 @@ server edition remains available through `npm start` and `npm run build`.
 ## Local and production builds
 
 - `npm run dev:browser`: browser-only development.
+- `npm run test:browser-engine`: shared gameplay and rendering helper checks.
 - `npm run test:browser`: worker runtime checks against the actual engine.
 - `npm run build:browser`: model export and static browser bundle in `dist`.
 - `npx playwright test --config playwright.browser.config.js`: static-preview
@@ -34,6 +35,6 @@ removed after a day. Browser storage is best-effort; an actual storage failure
 shows a message while allowing in-memory play.
 
 The browser edition does not make live Jev provider calls. API keys cannot be
-included in a public static bundle. Existing server and AI tests remain relevant
-to the separate server edition; the browser release has its own runtime and
+included in a public static bundle. Existing server and AI tests remain available through `npm test` and the manual
+server workflow for the separate server edition; the browser release has its own runtime and
 static-host verification.

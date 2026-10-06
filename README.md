@@ -4,7 +4,9 @@
 
 I’m **Brandon Douglas**, and this is my interactive portfolio. I built the islands, the characters, the business simulation, and the interface around an AI controller that helps little Brandon decide what to do next. You can watch him work, mess with his plans, and open up the decision records to see how it went.
 
-The app uses React and Three.js, with Node, Express, and SQLite on the backend.
+[Play Little Worlds](https://little-worlds-brandon.vercel.app/) · [Portfolio](https://douglasvisuals.com/little-worlds/)
+
+The public portfolio edition runs entirely in your browser with React, Three.js, a simulation worker, and local visit saves. It uses the rules controller without an account or AI provider. GitHub releases on `main` automatically rebuild the same public game URL through Vercel. See [browser development and deployment](docs/BROWSER_DEPLOYMENT.md). The optional Node, Express, SQLite, and AI server edition remains available separately.
 
 ![The procedural miniature island, with roads, shops, a harbor, and neighboring islands](docs/images/island-overview.png)
 

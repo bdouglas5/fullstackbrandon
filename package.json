@@ -22,7 +22,8 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,css}\" \"server/**/*.js\" \"shared/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.js\" \"*.js\"",
     "build:browser": "npm run models && VITE_BROWSER_SIMULATION=true vite build",
     "dev:browser": "VITE_BROWSER_SIMULATION=true vite",
-    "test:browser": "node --test tests/browser-world.test.js"
+    "test:browser": "node --test tests/browser-world.test.js",
+    "test:browser-engine": "node scripts/test-browser-engine.js"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",

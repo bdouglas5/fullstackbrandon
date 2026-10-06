@@ -2,6 +2,9 @@ name: Verify browser portfolio
 on:
   push:
   pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -14,6 +17,7 @@ jobs:
           node-version: '22.23.3'
           cache: npm
       - run: npm ci
+      - run: npm run test:browser-engine
       - run: npm run test:browser
       - run: npm run build:browser
       - run: npx playwright install --with-deps chromium
