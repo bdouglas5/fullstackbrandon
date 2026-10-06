@@ -148,7 +148,23 @@ export function movementPoints(before, actor, current, state) {
   if (from === to) return unique([current, destination]);
   let nodes = route(from, to, state.bridgeClosed, state.traffic);
   if (!nodes.length) nodes = route(from, to, false, false);
-  return unique([current, ...nodes.map((n) => NODES[n]), destination]);
+  // Only road still ahead of the pose and short of the destination: a node
+  // already passed (or overshot) would draw a hairpin back to it.
+  const poly = nodes.map((n) => NODES[n]);
+  if (poly.length > 1) {
+    const total = poly.slice(1).reduce((sum, p, i) => sum + distance(poly[i], p), 0);
+    const start = nearestPathPosition(current, poly);
+    const end = nearestPathPosition(destination, poly);
+    const ahead = start.distance < 3 ? start.along : -1;
+    const stop = end.distance < 3 ? end.along : total + 1;
+    let along = 0;
+    const kept = poly.filter((p, i) => {
+      if (i) along += distance(poly[i - 1], p);
+      return along > ahead + 0.05 && along < stop - 0.05;
+    });
+    return unique([current, ...kept, destination]);
+  }
+  return unique([current, ...poly, destination]);
 }
 const distance3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const unique3 = (points) =>
@@ -487,9 +503,22 @@ export class ActorMotion {
       const w = PLAYOUT.follow,
         n = Math.max(1, Math.ceil(dt / 0.012)),
         h = dt / n;
+      // A hairpin ahead on the queued path: ease into it, never carry full
+      // speed through a reversal.
+      const cusp = this.nextCusp();
       for (let i = 0; i < n; i++) {
         this.followV +=
           (w * w * (play - this.followS) - 2 * w * this.followV) * h;
+        // Never carry more speed than the spring can shed before the
+        // playout point (no overshoot), braking by ramp rather than a cut.
+        this.followV = Math.max(
+          Math.min(this.followV, w * Math.max(0, play - this.followS)),
+          this.followV - 40 * h,
+        );
+        if (cusp !== null) {
+          const room = Math.max(0, cusp - this.followS);
+          this.followV = Math.max(Math.min(this.followV, room * 2.4 + 0.3), this.followV - 30 * h);
+        }
         this.followS += this.followV * h;
       }
       if (this.followV < 0) this.followV = 0;
@@ -602,6 +631,41 @@ export class ActorMotion {
     this.step = step;
     return this;
   }
+  // Arc length of the first hairpin on the queued path ahead of the pose: a
+  // reversal, or a turn tight enough that the corner rounder bent it into a
+  // loop (more than ~125 degrees of turning inside under a unit of road).
+  nextCusp() {
+    const turns = [];
+    let prev = null,
+      last = null;
+    for (const seg of this.queue) {
+      let s = seg.s0;
+      for (const q of seg.points) {
+        if (last) {
+          const len = distance3(last, q);
+          if (len > 1e-6) {
+            const dir = [(q[0] - last[0]) / len, (q[2] - last[2]) / len];
+            if (prev) {
+              const dot = Math.max(-1, Math.min(1, prev[0] * dir[0] + prev[1] * dir[1]));
+              turns.push({ s, turn: Math.acos(dot) });
+            }
+            prev = dir;
+            s += len;
+          }
+        }
+        last = q;
+      }
+    }
+    const window = 0.9;
+    for (let i = 0; i < turns.length; i++) {
+      let sum = 0;
+      for (let j = i; j < turns.length && turns[j].s - turns[i].s <= window; j++)
+        sum += turns[j].turn;
+      const at = turns[i].s + window / 2;
+      if (sum > 2.2 && at > this.followS + 1e-3) return at;
+    }
+    return null;
+  }
   // The pose is a spring behind the playout, so "when" is answered by where the
   // actor is on the path, not by the clock: discrete state (mounted, parked,
   // transition) switches exactly as the figure reaches the point where the
@@ -610,12 +674,30 @@ export class ActorMotion {
     const arrived = 0.03;
     let tick = this.queue[0]?.t0 ?? this.latestTick;
     for (const seg of this.queue) {
-      if (seg.s1 <= this.followS + arrived) tick = seg.t1;
-      else {
-        if (seg.length > 0 && this.followS > seg.s0)
-          tick =
-            seg.t0 + ((this.followS - seg.s0) / seg.length) * (seg.t1 - seg.t0);
-        else tick = Math.max(tick, seg.t0);
+      if (seg.length > 1e-6) {
+        if (seg.s1 <= this.followS + arrived) tick = seg.t1;
+        else {
+          if (this.followS > seg.s0)
+            tick =
+              seg.t0 +
+              ((this.followS - seg.s0) / seg.length) * (seg.t1 - seg.t0);
+          else tick = Math.max(tick, seg.t0);
+          break;
+        }
+      } else if (this.followS + arrived >= seg.s0) {
+        // Standing still (boarding, loading, parking): the figure has reached
+        // the spot, and the scene stays in this state for as long as the
+        // server did, in the clock's time, not the instant it arrives.
+        const dwell = THREE.MathUtils.clamp(
+          this.live.displayTick,
+          seg.t0,
+          seg.t1,
+        );
+        tick = Math.max(tick, dwell);
+        if (dwell < seg.t1 - EPS_TICK) break;
+        tick = seg.t1;
+      } else {
+        tick = Math.max(tick, seg.t0);
         break;
       }
     }
