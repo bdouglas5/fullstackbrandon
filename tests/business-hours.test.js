@@ -211,6 +211,9 @@ test("outstanding deliveries finish after closing before clock-out locks work", 
   // Leave the customer's building before ending the shift.
   while (s.brandon.buildingVisit) step(s);
   assert.equal(baseline(s), "rest");
+  // The ride home takes real time; with the night quota met the next shift is
+  // tomorrow's, so arriving after 20:00 does not wake him straight back up.
+  s.schedule.nightDelivered = s.schedule.nightQuota;
   assert.ok(begin(s, "rest"));
   assert.equal(shiftEnded(s), true);
   while (s.brandon.homeRoutine?.phase !== "sleeping") step(s);
