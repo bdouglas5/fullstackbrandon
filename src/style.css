@@ -3829,7 +3829,7 @@ button:hover:not(:disabled) {
   }
   .world-bottom {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 8px;
   }
   .world-bottom .brandon-card {

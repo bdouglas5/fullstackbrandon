@@ -94,6 +94,30 @@ test("phone sized first visit needs no account and has independent saved state",
   const play = page.locator(".mobile-play .primary-button");
   await expect(play).toHaveText("Pause simulation");
   await expect(page.locator(".island-canvas canvas")).toBeVisible();
+  for (const width of [390, 462]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const control of [
+      play,
+      page.locator(".world-bottom .brandon-card"),
+      page.locator(".world-bottom .business-launch"),
+    ]) {
+      expect(
+        await control.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          return element.contains(
+            document.elementFromPoint(
+              bounds.x + bounds.width / 2,
+              bounds.y + bounds.height / 2,
+            ),
+          );
+        }),
+      ).toBe(true);
+    }
+  }
+  await play.click();
+  await expect(play).toHaveText("Resume simulation");
+  await play.click();
+  await expect(play).toHaveText("Pause simulation");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

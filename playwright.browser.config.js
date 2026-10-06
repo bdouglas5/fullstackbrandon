@@ -7,6 +7,9 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4200",
     viewport: { width: 1280, height: 800 },
+    // CI uses software rendering. Keep the same layout and assertions while
+    // reducing GPU pixel work; these are functional checks, not FPS benchmarks.
+    deviceScaleFactor: process.env.CI ? 0.5 : 1,
     headless: true,
     launchOptions: {
       args: [
