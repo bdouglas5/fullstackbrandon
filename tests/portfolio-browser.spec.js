@@ -17,69 +17,98 @@ async function saved(page) {
     });
   });
 }
-test("portfolio visitor plays, changes weather, reloads progress, replays and exports with no server calls", async ({
-  page,
-}) => {
+test.describe.serial("desktop portfolio visit", () => {
+  let page, before;
   const requests = [],
     errors = [];
-  page.on("request", (request) => requests.push(request.url()));
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  const intro = page.getByRole("dialog", {
-    name: "Fullstack Brandon",
-    exact: true,
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage({
+      baseURL: "http://127.0.0.1:4200",
+      viewport: { width: 1280, height: 800 },
+      deviceScaleFactor: process.env.CI ? 0.5 : 1,
+    });
+    page.on("request", (request) => requests.push(request.url()));
+    page.on("pageerror", (error) => errors.push(error.message));
   });
-  await expect(intro).toContainText("Rules guide the next move.");
-  await intro
-    .getByRole("button", { name: "Start the simulation", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Pause simulation", exact: true }),
-  ).toBeVisible();
-  await expect
-    .poll(async () => (await saved(page))[0]?.state.tick, { timeout: 30000 })
-    .toBeGreaterThan(8);
-  await page.getByRole("button", { name: "Controls", exact: true }).click();
-  const controls = page.getByRole("dialog", { name: "Controls", exact: true });
-  await controls
-    .getByRole("button", { name: "Clear weather", exact: true })
-    .click();
-  await expect
-    .poll(async () => (await saved(page))[0]?.state.environment.weatherOverride)
-    .toBe("clear");
-  await page.keyboard.press("Escape");
-  await page
-    .getByRole("button", { name: "Pause simulation", exact: true })
-    .click();
-  const before = (await saved(page))[0];
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(intro).toBeVisible();
-  await expect
-    .poll(async () => (await saved(page))[0]?.state.status)
-    .toBe("paused");
-  const after = (await saved(page))[0];
-  expect(after.id).toBe(before.id);
-  expect(after.state.tick).toBe(before.state.tick);
-  await intro
-    .getByRole("button", { name: "Close introduction", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Rewind & replay", exact: true })
-    .click();
-  await expect(page.getByLabel("Replay timeline")).toBeVisible();
-  await page.getByLabel("Replay timeline").fill("0");
-  await expect(page.getByLabel("Replay timeline")).toHaveValue("0");
-  await page.getByRole("button", { name: "Exit replay", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Under the hood", exact: true })
-    .click();
-  const download = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Download this run", exact: true })
-    .click();
-  expect((await download).suggestedFilename()).toBe("little-worlds-run.json");
-  expect(requests.filter((url) => /\/api\/|typesafe/.test(url))).toEqual([]);
-  expect(errors).toEqual([]);
+  test.afterAll(async () => {
+    await page?.context().close();
+  });
+  test("visitor plays, changes weather and pauses without server calls", async () => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const intro = page.getByRole("dialog", {
+      name: "Fullstack Brandon",
+      exact: true,
+    });
+    await expect(intro).toContainText("Rules guide the next move.");
+    await intro
+      .getByRole("button", { name: "Start the simulation", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Pause simulation", exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(async () => (await saved(page))[0]?.state.tick, { timeout: 30000 })
+      .toBeGreaterThan(8);
+    await page.getByRole("button", { name: "Controls", exact: true }).click();
+    const controls = page.getByRole("dialog", {
+      name: "Controls",
+      exact: true,
+    });
+    await controls
+      .getByRole("button", { name: "Clear weather", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () => (await saved(page))[0]?.state.environment.weatherOverride,
+      )
+      .toBe("clear");
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("button", { name: "Pause simulation", exact: true })
+      .click();
+    await expect
+      .poll(async () => (await saved(page))[0]?.state.status)
+      .toBe("paused");
+    before = (await saved(page))[0];
+    expect(requests.filter((url) => /\/api\/|typesafe/.test(url))).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+  test("refresh keeps the paused visit and allows replay and export", async () => {
+    const intro = page.getByRole("dialog", {
+      name: "Fullstack Brandon",
+      exact: true,
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(intro).toBeVisible();
+    await expect
+      .poll(async () => (await saved(page))[0]?.state.status)
+      .toBe("paused");
+    const after = (await saved(page))[0];
+    expect(after.id).toBe(before.id);
+    expect(after.state.tick).toBe(before.state.tick);
+    await intro
+      .getByRole("button", { name: "Close introduction", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Rewind & replay", exact: true })
+      .click();
+    await expect(page.getByLabel("Replay timeline")).toBeVisible();
+    await page.getByLabel("Replay timeline").fill("0");
+    await expect(page.getByLabel("Replay timeline")).toHaveValue("0");
+    await page
+      .getByRole("button", { name: "Exit replay", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Under the hood", exact: true })
+      .click();
+    const download = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Download this run", exact: true })
+      .click();
+    expect((await download).suggestedFilename()).toBe("little-worlds-run.json");
+    expect(requests.filter((url) => /\/api\/|typesafe/.test(url))).toEqual([]);
+    expect(errors).toEqual([]);
+  });
 });
 test("phone sized first visit needs no account and has independent saved state", async ({
   page,
