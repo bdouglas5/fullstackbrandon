@@ -3,6 +3,7 @@ export default function WelcomeDialog({
   loading,
   busy,
   canStart,
+  jevConfigured = false,
   onClose,
   onStart,
   onAchievements,
@@ -42,7 +43,7 @@ export default function WelcomeDialog({
           <p id="welcome-description" className="intro-lead">
             This is my portfolio in motion. I built Fullstack Brandon to show
             how I think, design, and build—from the 3D world you explore to the
-            systems and AI that keep it running.
+            systems that keep it running.
           </p>
           <div className="welcome-loop" aria-label="How the business grows">
             <span>Deliver</span>
@@ -59,11 +60,16 @@ export default function WelcomeDialog({
             has a cost.
           </p>
           <p>
-            <b>AI makes the next move.</b>
+            <b>
+              {jevConfigured
+                ? "AI makes the next move."
+                : "Rules guide the next move."}
+            </b>
             <br />
-            It weighs stock, earnings, weather, and past outcomes to choose jobs
-            and investments. The simulation enforces what is possible—and
-            records what each choice changes.
+            {jevConfigured ? "AI weighs" : "The rules controller weighs"} stock,
+            earnings, weather, and past outcomes to choose jobs and investments.
+            The simulation enforces what is possible—and records what each
+            choice changes.
           </p>
           <p>
             <b>You can change the story.</b>
@@ -74,8 +80,10 @@ export default function WelcomeDialog({
           </p>
           <p className="welcome-note-text">
             A working system you can explore, influence, and inspect. Customers,
-            money, and reviews are simulated. The business keeps moving if AI is
-            unavailable.
+            money, and reviews are simulated.{" "}
+            {jevConfigured
+              ? "The business keeps moving if AI is unavailable."
+              : "This world runs with the rules controller; no live AI service is connected."}
           </p>
         </div>
         <div className="welcome-actions">

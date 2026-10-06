@@ -1,10 +1,14 @@
-name: Verify server edition
+name: Verify browser portfolio
 on:
-  workflow_dispatch:
+  push:
+  pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
-  verify:
+  browser:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,14 +17,15 @@ jobs:
           node-version: '22.23.3'
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run test:browser-engine
+      - run: npm run test:browser
+      - run: npm run build:browser
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
-      - run: npm run evaluate
+      - run: npx playwright test --config playwright.browser.config.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: verification-evidence
+          name: browser-portfolio-evidence
           path: |
             evidence/
             test-results/

@@ -23,3 +23,8 @@ evidence/
 test-results*/
 playwright-report/
 .DS_Store
+.vercel
+.env*
+
+# Local hosting linkage
+.vercel/

@@ -22,7 +22,8 @@ test("first visit explains the simulation and starts the business", async ({
   await expect(
     welcome.getByRole("button", { name: "Look around first" }),
   ).toHaveCount(0);
-  await expect(welcome).toContainText("AI makes the next move.");
+  await expect(welcome).toContainText("Rules guide the next move.");
+  await expect(welcome).toContainText("no live AI service is connected.");
   await expect(page.locator("main")).toHaveAttribute("inert", "");
   await welcome
     .getByRole("button", { name: "Start the simulation", exact: true })
