@@ -3470,7 +3470,11 @@ export function step(s) {
           );
         }
       }
-    } else if (roadStep(s, b, target, s.vehicle)) {
+    } else if (
+      // The home-rest branch above already took this tick's road step.
+      !(a === "rest" && target === "home") &&
+      roadStep(s, b, target, s.vehicle)
+    ) {
       if (a === "salvage") {
         b.buildingVisit ||= {
           phase: "entering",
