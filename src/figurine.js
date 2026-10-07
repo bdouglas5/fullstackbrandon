@@ -224,12 +224,12 @@ function sculpt() {
     head,
   );
   for (const side of [-1, 1]) {
-    // Soft cheeks round out the lower face the way a toy sculptor would.
+    // Slim cheeks keep the head round rather than chubby.
     add(
       "cheek",
-      ellipsoid(side * 0.125, 1.075, 0.155, 0.13, 0.1, 0.1),
-      0.07,
-      [side * 0.125, 1.075, 0.155, 0.14],
+      ellipsoid(side * 0.1, 1.085, 0.15, 0.1, 0.082, 0.08),
+      0.05,
+      [side * 0.1, 1.085, 0.15, 0.11],
       "skin",
       head,
     );

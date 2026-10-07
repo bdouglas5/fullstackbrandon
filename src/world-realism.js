@@ -4,6 +4,14 @@ import { dressFigurine } from "./figurine-dress.js";
 import { BUILDERS } from "./cast.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { FARM, ISLANDS, HOME_GARAGE } from "../shared/islands.js";
+import { setFarmExpanded, FARM_SHORE } from "./world-water.js";
+import {
+  buildPickleIsland,
+  animateIsland,
+  quaySlot,
+  QUAY_SLOTS,
+  GROUND,
+} from "./world-pickle-island.js";
 import { animateCharacter } from "./world-animation.js";
 import { buildRocketSkates } from "./toy-vehicles.js";
 import { SEAT } from "./toy-scale.js";
@@ -17,8 +25,16 @@ import {
 import { resolveTrafficPositions, transportRadius } from "../shared/traffic.js";
 
 // Where the freighter ties up (centre, approach drift, pier side).
-const HARBOR_SHIP_BERTH = { x: -7.95, z: 17.5, dx: -6, mirror: 1 };
-const FARM_BERTH = { x: 8.4, z: 23.8, dx: 6, mirror: -1 };
+const HARBOR_SHIP_BERTH = { x: -7.95, z: 17.5, dx: -6, mirror: 1, yaw: 0 };
+// At the island it lies along the quay at the back (south shore), its crane
+// side to the island, its hull clear of the sea wall.
+const FARM_BERTH = {
+  x: FARM.x + 1.8,
+  z: FARM.z + 9.25,
+  dx: 6,
+  mirror: 1,
+  yaw: Math.PI / 2,
+};
 const UNLOAD_TICKS = 36;
 const FOG_IN_SECONDS = 7;
 const FOG_OUT_SECONDS = 6;
@@ -227,207 +243,32 @@ export function extendWorldRealism(w) {
     FARM.z,
   ]);
   estate.visible = false;
-  const land = group(estate, "Contractor reclaimed island");
-  box(
+  // Pickle Cay is one plan: see world-pickle-island.js.
+  const orchard = w.world.children.filter(
+    (o) =>
+      o !== estate &&
+      Math.abs(o.position.x - FARM.x) < 3.4 &&
+      Math.abs(o.position.z - FARM.z) < 3.6,
+  );
+  // The orchard cay's own beach slope steps aside with it.
+  const oldBeach =
+    w.world.getObjectByName("Tidal beaches")?.children[FARM_SHORE];
+  if (oldBeach) orchard.push(oldBeach);
+  // Kept out of the static batches so the old orchard can step aside.
+  for (const o of orchard) o.userData.dynamic = true;
+  const island = buildPickleIsland(estate, w);
+  const {
     land,
-    "Reclaimed sandstone island",
-    [0, -0.55, 0.55],
-    [11, 1.4, 11],
-    "#b48d67",
-  );
-  box(
-    land,
-    "Reclaimed island beach",
-    [0, 0.1, 0.55],
-    [11.3, 0.25, 11.3],
-    "#e7d0a3",
-  );
-  box(
-    land,
-    "Island garden lawn",
-    [0, 0.29, 0.55],
-    [10.7, 0.18, 10.7],
-    "#8baa6d",
-  );
-  box(
-    estate,
-    "Port to pickle shop lane",
-    [0, 0.4, -2.2],
-    [1.8, 0.07, 3.9],
-    "#d4c3a0",
-  );
-  const causeway = group(w.world, "Contractor island causeway");
-  causeway.visible = false;
-  const length = Math.hypot(8, 7.1),
-    angle = Math.atan2(8, 7.1);
-  causeway.position.set(0, 0, 17.55);
-  causeway.rotation.y = angle;
-  box(
-    causeway,
-    "Island delivery causeway",
-    [0, 0.3, 0],
-    [2.6, 0.22, length],
-    "#9c8a73",
-  );
-  for (const side of [-1, 1])
-    for (let i = 0; i < 12; i++)
-      box(
-        causeway,
-        "Causeway handrail post",
-        [side * 1.22, 0.7, -length / 2 + (i * length) / 11],
-        [0.07, 0.8, 0.07],
-        "#e2d5b8",
-      );
-  for (const side of [-1, 1])
-    box(
-      causeway,
-      "Causeway safety rail",
-      [side * 1.22, 1.02, 0],
-      [0.07, 0.08, length],
-      "#e2d5b8",
-    );
-  const shop = group(
-    estate,
-    "Owned pickle shop and factory",
-    [-2.65, 0.4, 0.15],
-  );
-  box(shop, "Factory foundation", [0, 0.08, 0], [3.6, 0.16, 3.5], "#9caaa0");
-  const walls = group(shop, "Factory shell");
-  box(walls, "Factory rear wall", [0, 0.95, 1.65], [3.6, 1.9, 0.12], "#f6e6c8");
-  box(
-    walls,
-    "Factory side wall",
-    [-1.72, 0.95, 0],
-    [0.12, 1.9, 3.3],
-    "#e4d2b3",
-  );
-  box(
-    walls,
-    "Factory showroom sill",
-    [0, 0.2, -1.65],
-    [3.6, 0.4, 0.12],
-    "#2f7874",
-  );
-  const glass = box(
-    walls,
-    "Factory viewing window",
-    [0, 1.08, -1.65],
-    [3.3, 1.2, 0.035],
-    "#a2d5cb",
-  );
-  glass.material = new THREE.MeshStandardMaterial({
-    color: "#94c6bd",
-    transparent: true,
-    opacity: 0.22,
-    depthWrite: false,
-  });
-  const roof = box(
-    shop,
-    "Factory roof",
-    [0, 2.05, 0],
-    [3.85, 0.18, 3.8],
-    "#396f68",
-  );
-  label(shop, "BRANDON'S PICKLE WORKS", [0, 1.75, -1.76], 3.2);
-  const shopSign = shop.children.at(-1);
-  if (shopSign?.name === "BRANDON'S PICKLE WORKS")
-    shopSign.rotation.y = Math.PI;
-  const factory = group(shop, "Pickle fermentation and packing line");
-  const vats = [];
-  for (let i = 0; i < 3; i++) {
-    const vat = cylinder(
-      factory,
-      "Fermentation vat",
-      [-1 + i * 0.83, 0.63, 0.65],
-      0.31,
-      1.05,
-      "#9cad9e",
-    );
-    cylinder(vat, "Vat sanitary lid", [0, 0.55, 0], 0.32, 0.07, "#b5bdb0");
-    vats.push(vat);
-  }
-  box(
-    factory,
-    "Packing conveyor",
-    [0, 0.53, -0.65],
-    [2.8, 0.13, 0.6],
-    "#526966",
-  );
-  const jars = [];
-  for (let i = 0; i < 7; i++) {
-    const jar = cylinder(
-      factory,
-      "Fresh packed pickle jar",
-      [-1.2 + i * 0.38, 0.75, -0.65],
-      0.105,
-      0.3,
-      "#8ca36c",
-    );
-    cylinder(jar, "Gold jar lid", [0, 0.17, 0], 0.11, 0.045, "#eac474");
-    jars.push(jar);
-  }
-  const garden = group(estate, "Back garden and greenhouse", [1.55, 0.43, 2.5]);
-  const crops = [];
-  for (let row = 0; row < 4; row++) {
-    box(
-      garden,
-      "Cucumber raised growing bed",
-      [-1.2 + row * 0.9, 0.12, 0],
-      [0.65, 0.24, 3.9],
-      "#9a7350",
-    );
-    for (let p = 0; p < 7; p++) {
-      const plant = cylinder(
-        garden,
-        "Growing cucumber vine",
-        [-1.2 + row * 0.9, 0.45, -1.55 + p * 0.48],
-        0.15,
-        0.45,
-        "#557e50",
-      );
-      plant.scale.z = 1.25;
-      crops.push(plant);
-    }
-  }
-  const greenhouse = group(garden, "Glass cucumber greenhouse", [0.2, 0, 0]);
-  for (const x of [-1.8, 1.8])
-    for (const z of [-2.2, 2.2])
-      box(
-        greenhouse,
-        "Greenhouse aluminum frame",
-        [x, 1, z],
-        [0.06, 2, 0.06],
-        "#d8e2ce",
-      );
-  for (const x of [-1.8, 1.8]) {
-    box(
-      greenhouse,
-      "Greenhouse ridge rail",
-      [x, 2, 0],
-      [0.055, 0.055, 4.45],
-      "#d8e2ce",
-    );
-    const pane = box(
-      greenhouse,
-      "Greenhouse glass wall",
-      [x, 1, 0],
-      [0.025, 2, 4.4],
-      "#b7d7bf",
-    );
-    pane.material = glass.material;
-  }
-  for (const side of [-1, 1]) {
-    const pane = box(
-      greenhouse,
-      "Greenhouse glass roof",
-      [side * 0.9, 2.3, 0],
-      [1.96, 0.04, 4.45],
-      "#b7d7bf",
-    );
-    pane.rotation.z = -side * 0.32;
-    pane.material = glass.material;
-  }
-  const contractor = group(estate, "Cay Construction crew", [0.9, 0.43, -0.4]);
+    works: { shop, walls, roof, factory, vats, jars },
+    garden: { garden, crops, greenhouse },
+    bridge: causeway,
+    pallets: portStock,
+  } = island;
+  const contractor = group(estate, "Cay Construction crew", [
+    -0.1,
+    GROUND,
+    2.4,
+  ]);
   const builders = [];
   for (let i = 0; i < 2; i++) {
     const person = w.body.clone(true);
@@ -468,20 +309,22 @@ export function extendWorldRealism(w) {
       "#b99166",
     );
   label(contractor, "CAY CONSTRUCTION", [0, 1.55, 0.2], 2.6);
-  const portStock = group(
-    estate,
-    "Island port shipment pallets",
-    [1.35, 0.42, -3.5],
-  );
-  for (let i = 0; i < 6; i++)
-    box(
-      portStock,
-      "Imported supplies pallet",
-      [(i % 2) * 0.55, 0.2 + Math.floor(i / 2) * 0.42, 0],
-      [0.5, 0.38, 0.5],
-      "#c79761",
+  // Crates the freighter's crane sets on the quay's receiving pallets.
+  const quayCrates = Array.from({ length: QUAY_SLOTS }, (_, i) => {
+    const crate = box(
+      w.world,
+      "Island quay crate",
+      [0, 0, 0],
+      [0.4, 0.34, 0.4],
+      "#c38d55",
     );
+    box(crate, "Quay crate strap", [0, 0, 0], [0.42, 0.06, 0.42], "#efe5cb");
+    box(crate, "Quay crate strap", [0, 0, 0], [0.06, 0.36, 0.42], "#efe5cb");
+    crate.visible = false;
+    return crate;
+  });
   const importShip = group(w.world, "Supplier shipment vessel");
+  importShip.rotation.order = "YXZ";
   const freighter = buildFreighter(importShip);
   const { jib: cargoJib, cable: cargoCable, crate: cargoBox } = freighter;
   const shipFade = createFogFade(importShip);
@@ -709,6 +552,17 @@ export function extendWorldRealism(w) {
     jib,
     hook,
     portStock,
+    island,
+    orchard,
+    harborYard: { key: "crateRow", crates: w.crates || [], slot: crateSlot },
+    quayYard: {
+      key: "quayRow",
+      crates: quayCrates,
+      slot: (i) => {
+        const p = quaySlot(i);
+        return [FARM.x + p[0], p[1], FARM.z + p[2]];
+      },
+    },
     importShip,
     freighter,
     shipFade,
@@ -732,17 +586,18 @@ export function extendWorldRealism(w) {
 
 const CRATE_CYCLE_SECONDS = 8;
 const CRATE_FADE_SECONDS = 2.6;
-// The supply crates on the pier are the very crates the freighter's crane
-// carries over: one at a time, into a row. When Brandon takes stock they fade
-// away from the end of the row instead of vanishing.
-function updatePierCrates(
+// A cargo yard is where the freighter's crane sets its crates down: a pier row
+// at the harbor, the receiving pallets on the quay at Pickle Cay. The crates
+// are the very ones the crane carries over: one at a time, into a row. When
+// Brandon takes stock they fade away from the end of the row.
+function updateCargoYard(
   r,
-  w,
+  yard,
   s,
-  { atPort, farm, solid, berth, time, dt, reducedMotion },
+  { harborShip, desired, solid, berth, time, dt, reducedMotion, driveCrane },
 ) {
-  const crates = w.crates || [];
-  const row = (r.crateRow ||= {
+  const crates = yard.crates;
+  const row = (r[yard.key] ||= {
     settled: 0,
     fresh: false,
     wasPort: undefined,
@@ -758,10 +613,8 @@ function updatePierCrates(
     });
     row.alpha = crates.map(() => null);
   }
-  const desired = Math.min(CRATE_SLOTS, Math.ceil((s.harbor || 0) / 2));
-  const harborShip = atPort && !farm && atPort.kind !== "resources";
   // A shipment that has only just come in is unloaded by the crane.
-  if (harborShip && row.wasPort !== true && s.tick - atPort.arrivesAt < 4)
+  if (harborShip && row.wasPort !== true && s.tick - harborShip.arrivesAt < 4)
     row.fresh = !reducedMotion;
   if (!harborShip) row.fresh = false;
   row.wasPort = !!harborShip;
@@ -773,9 +626,17 @@ function updatePierCrates(
         row.cycleStart = time;
       }
       const u = (time - row.cycleStart) / CRATE_CYCLE_SECONDS;
-      const mast = r.importShip.position,
-        slot = crateSlot(row.settled),
-        local = { x: (slot[0] - mast.x) * berth.mirror, z: slot[2] - mast.z };
+      const ship = r.importShip,
+        slot = yard.slot(row.settled);
+      // Crane-local: relative to the ship, through its heading and mirroring.
+      const dx = slot[0] - ship.position.x,
+        dz = slot[2] - ship.position.z,
+        cos = Math.cos(berth.yaw),
+        sin = Math.sin(berth.yaw),
+        local = {
+          x: (dx * cos - dz * sin) * berth.mirror,
+          z: dx * sin + dz * cos,
+        };
       r.importShip.updateMatrixWorld(true);
       const pose = poseCrane(r.freighter, Math.min(u, 0.999), true, local);
       if (pose.held || pose.placed) {
@@ -787,12 +648,12 @@ function updatePierCrates(
         row.settled++;
         row.cycling = false;
       }
-    } else poseCrane(r.freighter, 0, false);
+    } else if (driveCrane) poseCrane(r.freighter, 0, false);
   } else {
     row.cycling = false;
     if (row.fresh) row.fresh = false;
     row.settled = desired;
-    poseCrane(r.freighter, reducedMotion ? 0.5 : 0, false);
+    if (driveCrane) poseCrane(r.freighter, reducedMotion ? 0.5 : 0, false);
   }
   crates.forEach((crate, i) => {
     const onPier = i < row.settled,
@@ -804,7 +665,7 @@ function updatePierCrates(
     else row.alpha[i] += Math.max(-step, Math.min(step, target - row.alpha[i]));
     if (carrying && carrying.index === i && !carrying.placed)
       crate.position.set(carrying.hook.x, carrying.hook.y, carrying.hook.z);
-    else crate.position.set(...crateSlot(i));
+    else crate.position.set(...yard.slot(i));
     const a = row.alpha[i];
     crate.visible = a > 0.01;
     for (const part of row.own[i]) {
@@ -833,16 +694,29 @@ export function updateBusinessWorld(w, s, time, dt, reducedMotion = false) {
   r.officeBuild.visible = officeStage === "building";
   r.estate.visible = stage !== "unowned";
   const completed = stage === "complete";
+  // The sea, the beach and the old orchard follow the construction stages:
+  // the island rises out of the orchard cay once reclamation starts.
+  const landUp = ["reclamation", "foundation", "building", "complete"].includes(
+    stage,
+  );
   const groundReady = completed || ["foundation", "building"].includes(stage);
-  r.land.scale.y = completed ? 1 : 0.2 + smooth(progress) * 0.8;
-  r.causeway.visible = groundReady;
-  r.causeway.scale.z = completed ? 1 : Math.max(0.05, progress);
+  const rise = stage === "reclamation" ? smooth(progress) : 1;
+  setFarmExpanded(landUp);
+  for (const piece of r.orchard) piece.visible = !landUp;
+  r.land.visible = landUp;
+  r.land.scale.y = completed ? 1 : 0.15 + rise * 0.85;
+  r.causeway.visible = landUp;
+  r.causeway.scale.z = completed || groundReady ? 1 : Math.max(0.05, rise);
+  const { gate, lane, quay } = r.island;
+  gate.visible = lane.visible = quay.visible = groundReady;
   r.shop.visible = groundReady;
   r.walls.visible = completed || stage === "building";
   r.roof.visible = completed || (stage === "building" && progress > 0.83);
   r.walls.scale.y = completed ? 1 : Math.max(0.07, progress);
   r.factory.visible = completed;
+  r.island.works.yard.visible = completed;
   r.garden.visible = completed;
+  r.island.grounds.visible = completed;
   r.contractor.visible =
     !completed && stage !== "unowned" && stage !== "purchased";
   for (const [i, person] of r.builders.entries())
@@ -885,9 +759,7 @@ export function updateBusinessWorld(w, s, time, dt, reducedMotion = false) {
       .find(
         (x) => x.status === "unloaded" && s.tick - (x.pickedAt ?? -100) < 30,
       );
-  r.portStock.visible =
-    completed &&
-    shipments.some((x) => x.status === "port" && x.portNode === "farm_port");
+  r.portStock.visible = completed;
   const shipment = atPort || atSea || departing;
   const ship = r.shipState,
     farm = shipment?.portNode === "farm_port",
@@ -925,20 +797,41 @@ export function updateBusinessWorld(w, s, time, dt, reducedMotion = false) {
     );
     r.importShip.rotation.set(
       reducedMotion ? 0 : Math.sin(time * 0.6) * 0.004,
-      0,
+      berth.yaw,
       reducedMotion ? 0 : bob * 0.006,
     );
     // The pier side of the hull faces the pier (mirrored at the island port).
     r.importShip.scale.x = berth.mirror;
   }
   if (!atPort) ship.dockTick = null;
-  updatePierCrates(r, w, s, {
-    atPort,
-    farm,
-    solid: fade > 0.99,
+  const solid = fade > 0.99;
+  const harborShip = atPort && !farm && atPort.kind !== "resources";
+  const quayShip = atPort && farm;
+  const quayCases =
+    (s.operations?.islandPort || 0) + (s.operations?.resourcesPort || 0);
+  updateCargoYard(r, r.harborYard, s, {
+    harborShip: harborShip ? atPort : null,
+    desired: Math.min(CRATE_SLOTS, Math.ceil((s.harbor || 0) / 2)),
+    solid,
     berth,
     time,
     dt,
+    reducedMotion,
+    driveCrane: !quayShip,
+  });
+  updateCargoYard(r, r.quayYard, s, {
+    harborShip: quayShip ? atPort : null,
+    desired: completed ? Math.min(QUAY_SLOTS, Math.ceil(quayCases / 2)) : 0,
+    solid,
+    berth,
+    time,
+    dt,
+    reducedMotion,
+    driveCrane: !!quayShip,
+  });
+  animateIsland(r.island, {
+    time,
+    active: completed && (packing || fermenting),
     reducedMotion,
   });
   r.embers.visible =
@@ -1144,8 +1037,7 @@ export function applyTransportTransition(
   if (!visual || visual.key !== key) {
     visual = {
       key,
-      progress:
-        active && !reducedMotion ? 0 : transition.progress,
+      progress: active && !reducedMotion ? 0 : transition.progress,
     };
     transitionMotion.set(rig, visual);
   }

@@ -23,13 +23,6 @@ export function createShorelineWorld(w) {
     parent.add(m);
     return m;
   };
-  const beach = mesh(
-    root,
-    new THREE.CylinderGeometry(1.35, 1.35, 0.035, 32),
-    "#e6cea0",
-    [-10.65, 0.38, -4.3],
-  );
-  beach.scale.z = 1.15;
   const bottle = (parent, color) => {
     const group = new THREE.Group();
     parent.add(group);

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Coins,
   Wrench,
+  Brain,
 } from "../icons.js";
 import { TOOLS, TRANSPORT } from "../../shared/engine.js";
 
@@ -18,6 +19,9 @@ export default function MissionPanel({
   setIntro,
   onUpgrades,
   onSetbacks,
+  brainOpen,
+  brainButton,
+  onBrain,
   state,
   loading,
   busy,
@@ -188,6 +192,19 @@ export default function MissionPanel({
         </button>
         <button className="secondary-button console-link" onClick={onSetbacks}>
           <CloudRain size={16} /> Controls
+        </button>
+        <button
+          ref={brainButton}
+          className={`brain-button brain-link ${run?.thinking && !history ? "is-thinking" : ""}`}
+          aria-label="Open Brandon’s brain"
+          aria-expanded={brainOpen}
+          aria-controls="brandon-brain"
+          onClick={onBrain}
+          title="See the live decision tree"
+        >
+          <Brain size={17} />
+          <span>Brain · decision tree</span>
+          <i aria-hidden="true" />
         </button>
       </div>
       <section className="priority-section">

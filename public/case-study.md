@@ -6,7 +6,7 @@ I built a little 3D version of myself running a pickle business. You can watch h
 
 He starts in a garage with zero coins, six prepaid cases, and no vehicle. Deliveries pay for more stock, equipment, construction, employees, and their own transport. Later he can negotiate for a factory island and start growing, fermenting, and packing local produce. I added rocket skates and a teleporter to the fleet, but he still has to earn the money for them.
 
-I built the procedural world in Three.js and the interface in React. Node and Express handle the API and simulation. SQLite keeps guest worlds, replay frames, checkpoints, achievement collections, and provider usage.
+I built the world in Three.js and the interface in React. Node and Express handle the API and simulation. SQLite keeps guest worlds, replay frames, checkpoints, achievement collections, and provider usage.
 
 Jev chooses from actions the engine already allows. The engine handles the route, inventory, costs, and timing. If a provider request fails or hits its allowance, the rules controller takes over and the interface tells you. Saved lessons give later requests context from previous outcomes and feedback.
 

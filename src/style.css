@@ -4732,6 +4732,10 @@ button:hover:not(:disabled) {
   cursor: default;
   opacity: 0.65;
 }
+.resting-notice .beach-weekend {
+  background: #cfe8ea;
+  color: #2f5a63;
+}
 .shift-fade {
   position: absolute;
   inset: 0;
@@ -4765,6 +4769,10 @@ button:hover:not(:disabled) {
     gap: 7px;
     max-width: calc(100% - 24px);
     padding: 7px 9px;
+  }
+  .resting-notice {
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .resting-notice b,
   .resting-notice button {
@@ -5145,5 +5153,36 @@ button {
     padding: 20px 18px;
     border-radius: 22px;
     overscroll-behavior: contain;
+  }
+}
+
+/* Follow mode: Brandon's current thought sits under his name label. */
+.character-label .character-thought {
+  display: block;
+  margin: 3px 0 0;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  font-weight: 500;
+  color: #c5dccb;
+}
+.brandon-card .decision-line {
+  margin-top: 3px;
+  color: #668456;
+}
+.world-bottom.is-following {
+  justify-content: flex-end;
+}
+.simulation-actions .brain-link {
+  grid-column: 1 / -1;
+  justify-content: center;
+  padding: 12px 8px;
+  font-size: 12px;
+  box-shadow: none;
+}
+@media (max-width: 800px) {
+  .world-panel .world-bottom.is-following .business-launch {
+    grid-column: 3;
   }
 }

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { surfaceUniforms } from "./world-surface.js";
-import { SHORES } from "./world-water.js";
+import { SHORES, SHORE_VECTORS, SHORE_RADII } from "./world-water.js";
 
 // Screen-space ribbons need more opacity than the old line particles.
 export const RAIN_OPACITY_GAIN = 1.8;
@@ -41,10 +41,8 @@ float shoreDistance(vec2 p) {
 `;
 
 const shoreUniforms = () => ({
-  uShores: {
-    value: SHORES.map((s) => new THREE.Vector4(s.x, s.z, s.hx, s.hz)),
-  },
-  uRadii: { value: SHORES.map((s) => s.r) },
+  uShores: { value: SHORE_VECTORS },
+  uRadii: { value: SHORE_RADII },
 });
 
 const HASH = /* glsl */ `

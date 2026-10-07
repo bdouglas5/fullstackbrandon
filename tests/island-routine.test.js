@@ -76,7 +76,7 @@ test("rest parks transport, enters the house, charges overnight and walks outsid
   assert.deepEqual(s.brandon.position, NODES.home);
 });
 
-test("route geometry follows the supplied navigation immediately while dashes flow", () => {
+test("route is pinned to the courier, eases the far road, and dashes flow", () => {
   const overlay = createRouteOverlay();
   const a = [
     [0, 0.43, 0],
@@ -88,17 +88,27 @@ test("route geometry follows the supplied navigation immediately while dashes fl
     [2, 0.43, 1],
     [4, 0.43, 0],
   ];
+  const maxZ = () => {
+    const attr = overlay.line.geometry.attributes.instanceStart;
+    let top = 0;
+    for (let i = 0; i < overlay.line.geometry.instanceCount; i++)
+      top = Math.max(top, attr.getZ(i));
+    return top;
+  };
   overlay.update(a, 1 / 60);
   const offset = overlay.line.material.dashOffset;
   overlay.update(b, 1 / 60);
-  const attr = overlay.line.geometry.attributes.instanceEnd;
-  assert.equal(attr.getZ(0), 1);
-  assert.equal(attr.getZ(1), 0);
   assert.ok(overlay.line.material.dashOffset < offset);
+  // First frame after a change: the far road has barely moved, not snapped.
+  assert.ok(maxZ() < 0.9);
+  for (let i = 0; i < 90; i++) overlay.update(b, 1 / 60);
+  assert.ok(maxZ() > 0.5);
   const paused = overlay.line.material.dashOffset;
   overlay.update(b, 1 / 60, false);
   assert.equal(overlay.line.material.dashOffset, paused);
-  assert.equal(overlay.line.geometry.attributes.instanceStart.getX(0), 0);
+  const attr = overlay.line.geometry.attributes.instanceStart;
+  assert.equal(attr.getX(0), 0);
+  assert.equal(attr.getZ(0), 0);
   overlay.line.geometry.dispose();
   overlay.line.material.dispose();
 });

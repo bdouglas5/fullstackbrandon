@@ -616,14 +616,32 @@ export function yieldAtJunction(state, actor, from, to, nodes) {
     0,
     (state.crew || []).findIndex((c) => c.id === actor.id),
   );
+  const pocket = (i, spots) => [...spots[i % spots.length]];
   const turnouts = {
     harbor_dock: founder ? [-1.7, 14] : [-7.2, 12.5 + index * 2.2],
-    farm_port: founder
-      ? [8.5, 24.2]
-      : [6.3 + (index % 2) * 2.2, 22.0 + Math.floor(index / 2) * 2.2],
+    // Pickle Cay: every waiting vehicle has its own pocket (the gate pier, the
+    // lay-by beside the lane, the quay apron), clear of the others.
+    farm_gate: founder
+      ? [5.1, 21.9]
+      : pocket(index, [
+          [2.9, 20.8],
+          [5.1, 20.8],
+          [2.9, 21.9],
+        ]),
     farm_shop: founder
-      ? [8.5, 26.1]
-      : [6.3 + (index % 2) * 2.2, 26.4 + Math.floor(index / 2) * 2.2],
+      ? [5.5, 28.7]
+      : pocket(index, [
+          [2.2, 31.3],
+          [1.0, 31.3],
+          [1.6, 30.3],
+        ]),
+    farm_port: founder
+      ? [5.5, 29.7]
+      : pocket(index, [
+          [7.4, 31.3],
+          [6.3, 31.3],
+          [6.4, 30.4],
+        ]),
     harbor: founder ? [-1.7, 3] : [-1.7, 4.5 + index * 2.2],
     cafe: founder ? [8.3, 4.4] : [6.3, 4.4 + index * 2.2],
   };

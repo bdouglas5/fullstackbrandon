@@ -8,7 +8,7 @@ I’m **Brandon Douglas**, and this is my interactive portfolio. I built the isl
 
 The public portfolio edition runs entirely in your browser with React, Three.js, a simulation worker, and local visit saves. It uses the rules controller without an account or AI provider. GitHub releases on `main` automatically rebuild the same public game URL through Vercel. See [browser development and deployment](docs/BROWSER_DEPLOYMENT.md). The optional Node, Express, SQLite, and AI server edition remains available separately.
 
-![The procedural miniature island, with roads, shops, a harbor, and neighboring islands](docs/images/island-overview.png)
+![The miniature island, with roads, shops, a harbor, and neighboring islands](docs/images/island-overview.png)
 
 > Brandon starts in his garage with zero coins and six prepaid cases. He has to deliver enough pickles to pay for supplies, better transport, employees, and eventually a factory island. There are rocket skates in the fleet. I stand by that decision.
 
@@ -43,7 +43,7 @@ You can watch at 1×, 2×, 4×, or 8× speed. The same supply, money, and delive
 | Layer | What it does | Where to inspect it |
 | --- | --- | --- |
 | Product experience | Character-led simulation, staged onboarding, operations controls, achievements, reviews, optional engineering tools | [`src/main.jsx`](src/main.jsx), [`src/components/`](src/components/) |
-| Procedural 3D world | Original miniature buildings, characters, props, fleet, ocean, shoreline, weather, lighting, and articulated motion | [`src/world.js`](src/world.js), [`src/Island.jsx`](src/Island.jsx), [`src/world-motion.js`](src/world-motion.js) |
+| 3D world | Miniature buildings, characters, props, fleet, ocean, shoreline, weather, lighting, and articulated motion | [`src/world.js`](src/world.js), [`src/Island.jsx`](src/Island.jsx), [`src/world-motion.js`](src/world-motion.js) |
 | Simulation engine | Legal actions, seeded events, routing, inventory, money, production, progression, and retirement | [`shared/engine.js`](shared/engine.js), [`shared/realism.js`](shared/realism.js) |
 | Logistics | Road graphs, transport footprints, swept collision checks, reservations, loading, physical handoffs, sea corridors | [`shared/traffic.js`](shared/traffic.js), [`src/navigation-path.js`](src/navigation-path.js), [`shared/shoreline.js`](shared/shoreline.js) |
 | Backend | Guest ownership, commands, HTTP boundaries, server-sent events, simulation coordination | [`server/index.js`](server/index.js) |
@@ -123,7 +123,7 @@ I get interested in details like where the van parks and whether Brandon gets ba
 
 That’s a good example of how I work on this project. I start with something I want to see happen, then work through what the software needs to remember to make it happen properly.
 
-I’ve worked across the interface, procedural models, simulation rules, API, persistence, AI integration, and tests. Being able to follow a feature all the way through is a big part of why I wanted to build this.
+I’ve worked across the interface, 3D models, simulation rules, API, persistence, AI integration, and tests. Being able to follow a feature all the way through is a big part of why I wanted to build this.
 
 If you're reviewing my work, start with [the case study](docs/CASE_STUDY.md). It connects the visible experience to the technical decisions and their tradeoffs. If you want to read the code first, start at [`shared/engine.js`](shared/engine.js), then follow one delivery through the server and renderer.
 
@@ -150,7 +150,7 @@ cp .env.example .env
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start the local server and development frontend |
-| `npm run build` | Export procedural models and build the frontend |
+| `npm run build` | Export models and build the frontend |
 | `npm start` | Serve the production build; build it first and configure `PUBLIC_ORIGIN` |
 | `npm test` | Build, then run the Node test suite |
 | `npx playwright install chromium` | Install the browser used by end-to-end tests |
@@ -177,7 +177,7 @@ I’ve prepared the app for **one Node process with persistent SQLite storage**.
 | [Architecture](docs/ARCHITECTURE.md) | System flow, source map, ownership, persistence, API, and operational tradeoffs |
 | [Simulation field guide](docs/SIMULATION.md) | Economy, supply chain, schedules, transport, disruptions, reviews, and achievements |
 | [AI and replay](docs/AI_AND_REPLAY.md) | Provider contract, fallback, saved lessons, checkpoints, branching, and fair comparisons |
-| [World and motion](docs/WORLD_AND_MOTION.md) | Procedural assets, rendering, continuity, weather, camera, and performance |
+| [World and motion](docs/WORLD_AND_MOTION.md) | World assets, rendering, continuity, weather, camera, and performance |
 | [Development guide](docs/DEVELOPMENT.md) | Setup, code navigation, testing strategy, and safe changes |
 | [Verification](docs/VERIFICATION.md) | Exactly what can be checked, and the current publication checks |
 | [Deployment](docs/DEPLOYMENT.md) | Environment, persistent storage, container setup, backup, and recovery |

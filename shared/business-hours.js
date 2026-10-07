@@ -1,3 +1,4 @@
+import { beachHours } from "./beach.js";
 // Keep saved requests intact while the business and its owner are resting.
 export function brandonResting(s) {
   const b = s.brandon;
@@ -11,7 +12,22 @@ export function brandonResting(s) {
     b.labor?.breakRemaining > 0 ||
     ["meal_break", "rest_break"].includes(b.labor?.status) ||
     (b.action === "rest" && b.node === b.target) ||
+    (b.action === "beach_day" && b.buildingVisit?.phase === "inside") ||
     (!b.action && b.node === "home" && b.labor?.status === "off_duty")
+  );
+}
+
+// Off-duty weekend leisure: Brandon spends the daylight hours of a clocked-out
+// weekend at the beach. A chosen "Beach weekend" keeps him there all weekend.
+export function weekendBeachTime(s) {
+  const b = s.brandon;
+  if (!b || !s.schedule?.isWeekend || b.combat || b.voyage) return false;
+  if (!shiftEnded(s)) return false;
+  const week = Math.floor(((s.schedule.day || 1) - 1) / 7);
+  return (
+    s.request === "beach_day" ||
+    s.weekendLeisure?.week === week ||
+    beachHours(s.world?.hour ?? 12)
   );
 }
 

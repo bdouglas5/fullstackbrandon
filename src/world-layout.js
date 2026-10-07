@@ -1,7 +1,13 @@
 import * as THREE from "three";
 
 // A single rounded footprint has no overlapping coplanar terrain tiles.
-export function roundedIslandGeometry(width, depth, radius, height) {
+export function roundedIslandGeometry(
+  width,
+  depth,
+  radius,
+  height,
+  canal = true,
+) {
   const x = -width / 2,
     z = -depth / 2,
     r = radius;
@@ -16,13 +22,15 @@ export function roundedIslandGeometry(width, depth, radius, height) {
   shape.lineTo(x, z + r);
   shape.quadraticCurveTo(x, z, x + r, z);
   // The original canal and its two footbridges remain in the town center.
-  const canal = new THREE.Path();
-  canal.moveTo(-4.42, -5.7);
-  canal.lineTo(-4.42, 5.7);
-  canal.lineTo(-3.58, 5.7);
-  canal.lineTo(-3.58, -5.7);
-  canal.closePath();
-  shape.holes.push(canal);
+  if (canal) {
+    const channel = new THREE.Path();
+    channel.moveTo(-4.42, -5.7);
+    channel.lineTo(-4.42, 5.7);
+    channel.lineTo(-3.58, 5.7);
+    channel.lineTo(-3.58, -5.7);
+    channel.closePath();
+    shape.holes.push(channel);
+  }
   const geometry = new THREE.ExtrudeGeometry(shape, {
     depth: height,
     bevelEnabled: false,

@@ -678,9 +678,9 @@ export function townsHead(spec) {
   add(skull(h), 0.025, [0, TOWN.headY, 0, 0.18 * h], "skin");
   for (const side of [-1, 1]) {
     add(
-      ellipsoid(side * 0.07, 0.618, 0.09, 0.07, 0.055, 0.055),
-      0.045,
-      [side * 0.07, 0.618, 0.09, 0.08],
+      ellipsoid(side * 0.05, 0.624, 0.088, 0.048, 0.04, 0.04),
+      0.03,
+      [side * 0.05, 0.624, 0.088, 0.06],
       "skin",
     );
     add(

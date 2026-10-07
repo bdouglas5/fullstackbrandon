@@ -838,7 +838,7 @@ export function taskForAction(action = "") {
   if (/^(restore|repair|craft_|buy_|upgrade_|hire_)/.test(action))
     return "build";
   if (/^negotiate_/.test(action)) return "talk";
-  if (/^(rest|wait|vacation_)/.test(action)) return "rest";
+  if (/^(rest|wait|vacation_|beach_)/.test(action)) return "rest";
   return "pack";
 }
 

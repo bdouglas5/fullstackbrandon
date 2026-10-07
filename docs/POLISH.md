@@ -15,7 +15,7 @@ Implemented and verified October 3, 2026 (America/Los_Angeles). The normal local
 
 ## World and animation
 
-Editable source lives in `src/world.js`, `src/world-details.js`, and `src/world-polish.js`. Original procedural geometry is retained; no third-party model licensing or runtime model CDN is required.
+Editable source lives in `src/world.js`, `src/world-details.js`, and `src/world-polish.js`. No third-party model licensing or runtime model CDN is required.
 
 Sunset Bay now has a stepped seven-floor hotel with balconies, recessed glazing, rooftop pergola, pool tiles, loungers, towels and parasols. Reef Beach Club has a furnished deck, bar, stools, drinks, lighting and palms. Juniper has fishing nets and dockside supplies; Dill Ridge has trail fencing; Copperport has cornices and rooftop tanks; Festival Key has stage speakers and bunting. The district shops have awnings, steps, planters and shoreline details. Trees vary deterministically in scale and rotation, and the cloud population increased from four to twelve.
 

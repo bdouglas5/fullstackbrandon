@@ -5,6 +5,15 @@ import {
 import "./adaptive-resolution.css";
 import { SHORELINE, shorelineCollection } from "../shared/shoreline.js";
 import { createShorelineWorld } from "./world-shoreline.js";
+import {
+  createBeachWorld,
+  beachShuffle,
+  lieOnLounger,
+  residentSlot,
+  residentsAtBeach,
+  standOnSand,
+} from "./world-beach.js";
+import { BEACH } from "../shared/beach.js";
 import { createCameraMotion } from "./camera-motion.js";
 import { visibleOrders } from "../shared/business-hours.js";
 import { createCombatWorld } from "./world-combat.js";
@@ -71,6 +80,8 @@ export default function Island({
   reducedMotion,
   followTarget = "brandon",
   onFollowTargetChange,
+  onFollowModeChange,
+  thought = "",
   notificationScope = "live",
   placingOil = false,
   onPlaceOil,
@@ -294,6 +305,7 @@ export default function Island({
     const lens = createWorldLens(renderer, scene, camera);
     const w = buildWorld();
     const shorelineWorld = createShorelineWorld(w);
+    const beachWorld = createBeachWorld(w);
     const live = new LiveClock();
     let lastFrame = null;
     const combatWorld = createCombatWorld(w, live);
@@ -677,6 +689,7 @@ export default function Island({
           !actor.vehicleApproach &&
           !actor.combat &&
           !actor.slip &&
+          !actor.buildingVisit?.beach &&
           (!actor.buildingVisit || actor.buildingVisit.phase === "inside") &&
           ((!actor.move && !voyage) || (onShore && !personMotion.moving));
         const building = !!actor.buildingVisit;
@@ -741,6 +754,28 @@ export default function Island({
           dt,
           reducedMotion,
         });
+        // Weekend leisure: ease back onto the lounger, feet to the sea.
+        const lounging =
+          actor.action === "beach_day" &&
+          actor.buildingVisit?.beach &&
+          actor.buildingVisit.phase === "inside" &&
+          !actor.combat &&
+          Math.hypot(
+            personMotion.position.x - BEACH.brandon.head[0],
+            personMotion.position.z - BEACH.brandon.head[1],
+          ) < 0.2;
+        const lie = beachWorld.lounge(
+          w.brandon,
+          personMotion,
+          lounging,
+          dt,
+          t,
+          reducedMotion,
+        );
+        renderer.domElement.dataset.beachPhase = actor.buildingVisit?.beach
+          ? actor.buildingVisit.phase
+          : "idle";
+        renderer.domElement.dataset.beachLounging = String(lie > 0.95);
         w.ring.visible =
           following.current && selectedTarget.current === "brandon";
         w.bike.visible = owned.includes("bike") && !voyage;
@@ -1246,7 +1281,12 @@ export default function Island({
           ? shoreMotions.get(routeActor.id || "brandon")
           : motions.get(routeActor.id || "brandon");
         const points = routeTrajectory(routeActor, s, routeMotion);
-        routeOverlay.update(points, reducedMotion ? 0 : dt, active);
+        routeOverlay.update(
+          points,
+          reducedMotion ? 0 : dt,
+          active,
+          routeMotion?.moving ? routeMotion.speed : 0,
+        );
         renderer.domElement.dataset.routeStyle = "flowing";
         renderer.domElement.dataset.routeWidth = String(
           routeOverlay.line.material.linewidth,
@@ -1266,9 +1306,31 @@ export default function Island({
         renderer.domElement.dataset.brandonPose = `${motion.position.x.toFixed(4)},${motion.position.z.toFixed(4)}`;
         renderer.domElement.dataset.liveLag = live.lag.toFixed(3);
         renderer.domElement.dataset.liveTickRate = live.tickRate.toFixed(2);
+        const beachDay = residentsAtBeach(s);
+        let homeResident = 0,
+          beachGoers = 0;
         w.customers.forEach((c, i) => {
           const customer = c.userData.customer;
           c.userData.serviceHome ||= [c.position.x, c.position.z];
+          if (!customer?.island || customer.island === "home") {
+            const slot = residentSlot(homeResident++);
+            if (beachShuffle(c, beachDay, dt, reducedMotion)) {
+              beachGoers++;
+              c.visible = true;
+              if (slot.kind === "lie") lieOnLounger(c, slot.index);
+              else standOnSand(c, slot.index);
+              const out = animateCitizen(c, {
+                time: t,
+                dt,
+                phase: i,
+                facing: undefined,
+                reducedMotion,
+              });
+              if (slot.kind === "stand") c.rotation.y += out.yaw;
+              return;
+            }
+            c.rotation.x = 0;
+          }
           const [cx, cz] = c.userData.serviceHome;
           let nearest = null,
             distance = Infinity;
@@ -1338,11 +1400,20 @@ export default function Island({
           });
         });
         let yielding = 0;
+        let walkerIndex = 0;
         w.pedestrians.forEach((p) => {
+          if (p.userData.homeWalker) {
+            const at = beachShuffle(p, beachDay, dt, reducedMotion);
+            p.userData.walkPath = at
+              ? BEACH.strolls[walkerIndex++ % BEACH.strolls.length]
+              : p.userData.homePath;
+            if (at) beachGoers++;
+          }
           if (updatePedestrian(p, t, dt, [...subjects.values()], reducedMotion))
             yielding++;
         });
         renderer.domElement.dataset.yieldingPedestrians = String(yielding);
+        renderer.domElement.dataset.beachResidents = String(beachGoers);
         const diagnostics = renderer.domElement.dataset;
         diagnostics.activeVehicle = transport;
         diagnostics.riderVisible = String(w.rider.visible);
@@ -1563,7 +1634,7 @@ export default function Island({
         const origin = s.operations?.origin || "home";
         const anchor =
           origin === "farm_shop"
-            ? new THREE.Vector3(FARM.x - 2.65, 3.5, FARM.z)
+            ? new THREE.Vector3(FARM.x - 3.15, 3.4, FARM.z)
             : origin === "cafe"
               ? new THREE.Vector3(4, 3.1, -0.25)
               : new THREE.Vector3(
@@ -1734,6 +1805,9 @@ export default function Island({
       c.controls.target.copy(c.subject);
       c.camera.position.copy(c.subject).add(new THREE.Vector3(6, 6, 8));
     }
+  }, [follow]);
+  useEffect(() => {
+    onFollowModeChange?.(follow);
   }, [follow]);
   useEffect(() => {
     const c = controller.current;
@@ -1997,6 +2071,9 @@ export default function Island({
               : state?.crew?.find((c) => c.id === followTarget)?.name ||
                 "Brandon"}{" "}
             <span>↗</span>
+            {follow && thought && followTarget === "brandon" && (
+              <small className="character-thought">{thought}</small>
+            )}
           </button>
         </div>
       )}

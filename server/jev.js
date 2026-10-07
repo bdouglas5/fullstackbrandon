@@ -1,5 +1,9 @@
 import { decisionOptions } from "../shared/decision-trace.js";
-import { canClockOut, shiftEnded } from "../shared/business-hours.js";
+import {
+  canClockOut,
+  shiftEnded,
+  weekendBeachTime,
+} from "../shared/business-hours.js";
 import { randomUUID } from "node:crypto";
 import { learningContext } from "../shared/learning.js";
 import {
@@ -43,6 +47,12 @@ export function makeDecider(
         action: "rest",
         controller: "rules",
         fallback: "Clocking out at the end of the scheduled shift",
+      };
+    if (weekendBeachTime(s))
+      return {
+        action: "beach_day",
+        controller: "rules",
+        fallback: "Weekend off: lounging on the beach",
       };
     if (s.controller === "rules")
       return { action: baseline(s), controller: "rules" };

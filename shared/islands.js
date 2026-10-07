@@ -18,8 +18,21 @@ export const FARM = {
   x: 4,
   z: 25,
   dock: [4, 21.1],
-  landing: [5.6, 23.2],
+  landing: [7.8, 30.2],
 };
+// The finished private island (built by Cay Construction) grows out of the
+// orchard cay. Its outline is a rounded rectangle like every other shore, so
+// the sea's foam and shallows can follow it exactly. The north shore sits just
+// south of the gate pier at `dock`; the straight south shore is the quay the
+// supplier freighter ties up alongside.
+export const FARM_ISLAND = Object.freeze({
+  x: FARM.x,
+  z: FARM.z + 2.15,
+  hx: 5.4,
+  hz: 4.9,
+  r: 1.3,
+  top: 0.18,
+});
 export const REEF = {
   id: "reef",
   name: "Reef Island",

@@ -14,8 +14,8 @@ import { downloadRun } from "../game-client.js";
 const SYSTEMS = [
   [
     Layers,
-    "An original world, built in code",
-    "Procedural islands, buildings, characters, and vehicles form a miniature archipelago. Articulated animation, camera follow, boarding, and delivery handoffs connect every trip to the business behind it.",
+    "A living world, built in code",
+    "Islands, buildings, characters, and vehicles form a miniature archipelago. Articulated animation, camera follow, boarding, and delivery handoffs connect every trip to the business behind it.",
   ],
   [
     Activity,
@@ -52,10 +52,10 @@ export default function EngineeringPanel({ run, state }) {
       <span className="eyebrow">DESIGNED & IMPLEMENTED BY BRANDON DOUGLAS</span>
       <h2>An entire world, engineered to work.</h2>
       <p className="drawer-intro">
-        Fullstack Brandon brings interactive design, original 3D art, full-stack
-        engineering, and AI orchestration into one working experience. Every
-        delivery you watch connects to a route, an inventory ledger, a business
-        decision, and a history you can inspect.
+        Fullstack Brandon brings interactive design, full-stack engineering, and
+        AI orchestration into one working experience. Every delivery you watch
+        connects to a route, an inventory ledger, a business decision, and a
+        history you can inspect.
       </p>
       <div className="architecture-flow">
         <span>Explore</span>
@@ -142,7 +142,7 @@ shared/learning.js       → persisted lessons & feedback
 shared/achievements.js   → milestones & retirement prerequisites
 server/jev.js           → bounded AI decisions & fallback
 server/store.js         → sessions, runs, history & checkpoints
-src/world*.js           → procedural assets, atmosphere & motion
+src/world*.js           → world assets, atmosphere & motion
 src/Island.jsx          → world rendering, camera & interactions
 tests/                  → engine, server & browser verification`}</pre>
       </details>

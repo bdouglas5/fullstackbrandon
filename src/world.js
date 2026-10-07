@@ -9,6 +9,7 @@ import {
   LIGHTHOUSE,
 } from "../shared/islands.js";
 import { roundedIslandGeometry, roadSurfaceGeometry } from "./world-layout.js";
+import { BEACH } from "../shared/beach.js";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { EDGES, NODES, PEOPLE } from "../shared/engine.js";
@@ -41,7 +42,7 @@ const C = {
 };
 export function buildWorld() {
   const world = new THREE.Group();
-  world.name = "Fullstack Brandon — original procedural island";
+  world.name = "Fullstack Brandon — island";
   const kit = createToyKit();
   const treeSpots = [];
   const mats = new Map();
@@ -165,6 +166,47 @@ export function buildWorld() {
     land.position.set(MAIN_ISLAND.x, layer.y, MAIN_ISLAND.z);
     land.castShadow = land.receiveShadow = true;
     world.add(land);
+  }
+  // The weekend cove widens the west shore into a real beach with room for
+  // cabanas, loungers and the whole neighbourhood.
+  for (const layer of [
+    {
+      name: "Beach cove sandstone foundation",
+      grow: -0.25,
+      y: -1.3,
+      height: 1,
+      color: C.earth,
+    },
+    {
+      name: "Beach cove rounded shoreline",
+      grow: 0,
+      y: -0.3,
+      height: 0.48,
+      color: C.sand,
+    },
+    {
+      name: "Beach cove sand",
+      grow: -0.3,
+      y: 0.18,
+      height: BEACH.top - 0.18,
+      color: C.sand,
+    },
+  ]) {
+    const { cove } = BEACH;
+    const sand = new THREE.Mesh(
+      roundedIslandGeometry(
+        cove.hx * 2 + layer.grow * 2,
+        cove.hz * 2 + layer.grow * 2,
+        cove.r,
+        layer.height,
+        false,
+      ),
+      mat(layer.color),
+    );
+    sand.name = layer.name;
+    sand.position.set(cove.x, layer.y, cove.z);
+    sand.castShadow = sand.receiveShadow = true;
+    world.add(sand);
   }
   const roadRectangles = [];
   for (const [a, b, kind] of EDGES) {
@@ -1324,6 +1366,9 @@ export function buildWorld() {
           [island.x - 2.3, island.z],
         ]
       : homeLoops[i % 2];
+    // Neighbours who stroll the town streets also head to the beach on weekends.
+    g.userData.homeWalker = !island;
+    g.userData.homePath = g.userData.walkPath;
     g.userData.walkOffset = i * 3.83;
     // Each walker strolls at their own persona's pace.
     g.userData.walkSpeed =

@@ -58,6 +58,7 @@ function App() {
   useEffect(() => lockPageGestures(), []);
   const [preview] = useState(() => fresh(42, defaultController));
   const [followTarget, setFollowTarget] = useState("brandon");
+  const [following, setFollowing] = useState(false);
   const [run, setRun] = useState(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
@@ -122,6 +123,17 @@ function App() {
   }, [panel, intro]);
   const live = run?.state || preview,
     state = history?.[replay]?.state || live;
+  const lastDecision = state.decisions?.at(-1);
+  const thought =
+    state.status === "complete"
+      ? "The business is built. Time to enjoy the view."
+      : run?.thinking && !history
+        ? "Choosing my next move…"
+        : state.brandon.action
+          ? ACTIONS[state.brandon.action]?.verb
+          : state.status === "ready"
+            ? "Ready to collect stock and make the first delivery."
+            : state.message;
   useEffect(() => {
     if (
       shiftTransition === "advancing" &&
@@ -141,14 +153,14 @@ function App() {
     );
     return () => clearTimeout(timer);
   }, [shiftTransition, reduced]);
-  async function advanceToMorning() {
+  async function advanceToMorning(plan = "morning") {
     if (!run || busy || shiftTransition) return;
     setShiftTransition("advancing");
     setBusy(true);
     try {
       const next = await api(`/runs/${run.id}/command`, {
         type: "next_shift",
-        value: "morning",
+        value: plan,
       });
       morningTarget.current = next.state.brandon.shift.nextShiftAt;
       setRun(next);
@@ -372,6 +384,9 @@ function App() {
           setIntro={setIntro}
           onUpgrades={() => setPanel("upgrades")}
           onSetbacks={() => setPanel("setbacks")}
+          brainOpen={brainOpen}
+          brainButton={brainButton}
+          onBrain={() => setBrainOpen(!brainOpen)}
           state={state}
           loading={loading}
           busy={busy}
@@ -414,19 +429,40 @@ function App() {
                 {shiftTransition === "revealing"
                   ? "Morning shift ready"
                   : shiftTransition
-                    ? "Advancing to morning…"
-                    : "Brandon has clocked out"}
+                    ? state.schedule?.isWeekend
+                      ? "Skipping the weekend…"
+                      : "Advancing to morning…"
+                    : state.brandon.action === "beach_day"
+                      ? "Brandon is lounging on the beach"
+                      : state.schedule?.isWeekend
+                        ? "Brandon is off for the weekend"
+                        : "Brandon has clocked out"}
               </b>
               <button
                 disabled={locked || !!state.daytimeUntil || !!shiftTransition}
-                onClick={advanceToMorning}
+                onClick={() => advanceToMorning("morning")}
               >
                 {shiftTransition === "revealing"
                   ? "Ready"
                   : shiftTransition || state.daytimeUntil
-                    ? "Going to next shift…"
-                    : "Go to next shift"}
+                    ? state.schedule?.isWeekend
+                      ? "Skipping weekend…"
+                      : "Going to next shift…"
+                    : state.schedule?.isWeekend
+                      ? "Skip the weekend"
+                      : "Go to next shift"}
               </button>
+              {state.schedule?.isWeekend &&
+                !shiftTransition &&
+                !state.daytimeUntil && (
+                  <button
+                    className="beach-weekend"
+                    disabled={locked}
+                    onClick={() => advanceToMorning("beach")}
+                  >
+                    Spend it at the beach
+                  </button>
+                )}
             </div>
           )}
           {loading ? (
@@ -445,6 +481,8 @@ function App() {
                 reducedMotion={reduced}
                 followTarget={followTarget}
                 onFollowTargetChange={setFollowTarget}
+                onFollowModeChange={setFollowing}
+                thought={thought}
               />
             </Suspense>
           )}
@@ -525,46 +563,34 @@ function App() {
                     : "Resume simulation"}
             </button>
           </div>
-          <div className="world-bottom">
-            <button
-              className="brandon-card"
-              onClick={() => {
-                setPanel("inspect");
-              }}
-            >
-              <span className="avatar-mark">B.</span>
-              <span>
-                <b>
-                  Fullstack Brandon{" "}
-                  <span className="tiny-tag">PROBLEM SOLVER</span>
-                </b>
-                <small>
-                  {state.status === "complete"
-                    ? "The business is built. Time to enjoy the view."
-                    : run?.thinking && !history
-                      ? "Choosing my next move…"
-                      : state.brandon.action
-                        ? ACTIONS[state.brandon.action]?.verb
-                        : state.status === "ready"
-                          ? "Ready to collect stock and make the first delivery."
-                          : state.message}
-                </small>
-              </span>
-              <ScanEye size={20} />
-            </button>
-            <button
-              ref={brainButton}
-              className={`brain-button ${run?.thinking && !history ? "is-thinking" : ""}`}
-              aria-label="Open Brandon’s brain"
-              aria-expanded={brainOpen}
-              aria-controls="brandon-brain"
-              onClick={() => setBrainOpen(!brainOpen)}
-              title="See the live decision tree"
-            >
-              <Brain size={21} />
-              <span>Brain</span>
-              <i aria-hidden="true" />
-            </button>
+          <div className={`world-bottom ${following ? "is-following" : ""}`}>
+            {!following && (
+              <button
+                className="brandon-card"
+                onClick={() => {
+                  setPanel("inspect");
+                }}
+              >
+                <span className="avatar-mark">B.</span>
+                <span>
+                  <b>
+                    Fullstack Brandon{" "}
+                    <span className="tiny-tag">PROBLEM SOLVER</span>
+                  </b>
+                  <small>{thought}</small>
+                  {lastDecision && state.status !== "complete" && (
+                    <small className="decision-line">
+                      Decided: {lastDecision.label}
+                      {lastDecision.outcome &&
+                      lastDecision.outcome !== "In progress"
+                        ? ` → ${lastDecision.outcome}`
+                        : ` — ${lastDecision.reason}`}
+                    </small>
+                  )}
+                </span>
+                <ScanEye size={20} />
+              </button>
+            )}
             <button className="business-launch" onClick={openBusiness}>
               <Users size={17} /> Business{" "}
               <span>{state.customerQueue?.length || 0} pending orders</span>

@@ -262,7 +262,11 @@ export function laborStep(s, b, dayTicks) {
         ticks: Math.ceil((minutes / 1440) * dayTicks),
       });
   }
-  const busy = (b.action && b.action !== "rest") || b.move || b.voyage;
+  const leisure = b.action === "beach_day";
+  const busy =
+    (b.action && b.action !== "rest" && !leisure) ||
+    (b.move && !leisure) ||
+    b.voyage;
   if (!busy && !l.breakRemaining && l.pending.length) {
     const next = l.pending.shift();
     l.breakRemaining = next.ticks;

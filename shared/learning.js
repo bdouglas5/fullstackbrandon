@@ -150,10 +150,12 @@ function wellbeingStep(s) {
     const mood = member.wellbeing;
     if (mood.lastTick === s.tick) continue;
     mood.lastTick = s.tick;
+    const leisure = member.action === "beach_day";
     const working = !!(
-      member.move ||
+      (!leisure && member.move) ||
       member.voyage ||
-      (member.action && !["rest", "go_home", "wait"].includes(member.action))
+      (member.action &&
+        !["rest", "go_home", "wait", "beach_day"].includes(member.action))
     );
     const recovering =
       !working &&

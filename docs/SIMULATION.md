@@ -100,6 +100,8 @@ The retirement target uses its own explicit required collection. Do not assume t
 
 Schedules and workweeks affect productivity. The world includes business hours, lunch and rest breaks, weekly hours, fatigue, employee morale, wages, weekends, and paid recovery activities. Resort stays and later recovery can affect subsequent work.
 
+When Brandon is clocked out on a weekend he spends 09:00–19:00 at the west-shore beach cove (the `beach_day` action, layout in `shared/beach.js`), lounging on a chair while neighbours gather on the sand. "Skip the weekend" fast-forwards to Monday; "Spend it at the beach" (or the Operations panel suggestion) keeps him on the sand all weekend.
+
 Clock-out has to account for unfinished deliveries. Off-hours presentation can hide queued orders without deleting them. Rest advances time while preserving the visitor's base playback choice. These details matter because the interface should explain the day changing instead of making it look like orders disappeared.
 
 ```mermaid

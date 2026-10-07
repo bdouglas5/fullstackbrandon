@@ -1,5 +1,12 @@
 import * as THREE from "three";
-import { MAIN_ISLAND, FARM, REEF, ISLANDS } from "../shared/islands.js";
+import {
+  MAIN_ISLAND,
+  FARM,
+  FARM_ISLAND,
+  REEF,
+  ISLANDS,
+} from "../shared/islands.js";
+import { BEACH } from "../shared/beach.js";
 import { surfaceUniforms } from "./world-surface.js";
 
 export const SEA_LEVEL = -0.7;
@@ -10,6 +17,8 @@ export const PLANET = { x: 5, z: 2, flat: 46, curve: 0.012 };
 /** Sand outlines (center, half size, corner radius, top) for every island. */
 export const SHORES = [
   { x: MAIN_ISLAND.x, z: MAIN_ISLAND.z, hx: 16, hz: 12, r: 6, top: 0.18 },
+  // The weekend cove: a sand lobe reaching out to sea from the west shore.
+  { ...BEACH.cove, top: 0.18 },
   { x: FARM.x, z: FARM.z, hx: 2.75, hz: 2.55, r: 0.8, top: 0.155 },
   { x: REEF.x, z: REEF.z, hx: 2.7, hz: 2.6, r: 0.8, top: 0.17 },
   ...Object.values(ISLANDS).map((i) => ({
@@ -21,6 +30,21 @@ export const SHORES = [
     top: 0.18,
   })),
 ];
+// The sea and the rain read these shared arrays, so a shore can change shape
+// while the game runs: Pickle Cay grows from its orchard into the private
+// island once Cay Construction has finished it.
+export const SHORE_VECTORS = SHORES.map(
+  (s) => new THREE.Vector4(s.x, s.z, s.hx, s.hz),
+);
+export const SHORE_RADII = SHORES.map((s) => s.r);
+export const FARM_SHORE = SHORES.findIndex(
+  (s) => s.x === FARM.x && s.z === FARM.z,
+);
+export function setFarmExpanded(expanded) {
+  const shore = expanded ? FARM_ISLAND : SHORES[FARM_SHORE];
+  SHORE_VECTORS[FARM_SHORE].set(shore.x, shore.z, shore.hx, shore.hz);
+  SHORE_RADII[FARM_SHORE] = shore.r;
+}
 // Beach profile outward from the old sand edge: a rounded lip, a short bank,
 // a gentle beach where the tide comes and goes, then the underwater shelf.
 const PROFILE = [
@@ -71,8 +95,14 @@ function outline(shore, step = 0.18) {
 export function beachSkirts(material) {
   const group = new THREE.Group();
   group.name = "Tidal beaches";
-  for (const shore of SHORES) {
-    const ring = outline(shore);
+  for (const shore of SHORES) group.add(shoreSkirt(shore, material));
+  return group;
+}
+
+/** One island's sloped beach. `keep(nx, nz)` can leave stretches bare (quays). */
+export function shoreSkirt(shore, material, keep = () => true) {
+  {
+    const ring = outline(shore).filter(([, , nx, nz]) => keep(nx, nz));
     const positions = [],
       uvs = [],
       index = [];
@@ -89,6 +119,13 @@ export function beachSkirts(material) {
       n = ring.length;
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
+      // Skip the span between two kept stretches (a gap in the shore).
+      if (
+        ring[i] &&
+        ring[j] &&
+        Math.hypot(ring[i][0] - ring[j][0], ring[i][1] - ring[j][1]) > 0.5
+      )
+        continue;
       for (let k = 0; k < rows - 1; k++) {
         const a = i * rows + k,
           b = j * rows + k,
@@ -108,9 +145,8 @@ export function beachSkirts(material) {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.name = "Tidal beach slope";
     mesh.receiveShadow = true;
-    group.add(mesh);
+    return mesh;
   }
-  return group;
 }
 
 function oceanGeometry() {
@@ -166,10 +202,8 @@ export function createOcean() {
     uFoam: { value: new THREE.Color("#f4fbf6") },
     uNight: { value: 0 },
     uFlash: { value: 0 },
-    uShores: {
-      value: SHORES.map((s) => new THREE.Vector4(s.x, s.z, s.hx, s.hz)),
-    },
-    uRadii: { value: SHORES.map((s) => s.r) },
+    uShores: { value: SHORE_VECTORS },
+    uRadii: { value: SHORE_RADII },
     uPlanet: {
       value: new THREE.Vector4(PLANET.x, PLANET.z, PLANET.flat, PLANET.curve),
     },

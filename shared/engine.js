@@ -1,4 +1,5 @@
 import { SHORELINE } from "./shoreline.js";
+import { BEACH } from "./beach.js";
 import {
   ordersOpen,
   brandonResting,
@@ -8,6 +9,7 @@ import {
   canClockOut,
   unfinishedDeliveries,
   nextShiftTick,
+  weekendBeachTime,
 } from "./business-hours.js";
 import { combatCommand, combatStep, normalizeCombat } from "./combat.js";
 import {
@@ -77,8 +79,11 @@ export const NODES = {
   market: [10, 2],
   charge: [10, -3.4],
   harbor_dock: [-4, 14],
-  farm_port: [4, 21.1],
+  // Pickle Cay: the bridge lands at the gate pier, the lane runs south past the
+  // pickle works, and the supplier freighter berths at the quay at the back.
+  farm_gate: [4, 21.1],
   farm_shop: [4, 24.2],
+  farm_port: [4, 30.9],
   helipad: [14.5, -3.4],
   west_quay: [-8, 2],
   north_garden: [-4, -8],
@@ -107,8 +112,9 @@ export const EDGES = [
   ["workshop", "home"],
   ["home", "charge"],
   ["harbor", "harbor_dock"],
-  ["harbor_dock", "farm_port", "causeway"],
-  ["farm_port", "farm_shop"],
+  ["harbor_dock", "farm_gate", "causeway"],
+  ["farm_gate", "farm_shop"],
+  ["farm_shop", "farm_port"],
   ["charge", "helipad"],
   ["garden", "deli"],
   ["deli", "west_quay"],
@@ -328,6 +334,12 @@ for (const [id, vehicle] of Object.entries(TRANSPORT)) {
   };
 }
 Object.assign(ACTIONS, {
+  beach_day: {
+    label: "Lounge on the beach",
+    target: "garden",
+    verb: "Lounging on the weekend beach",
+    icon: "sun",
+  },
   vacation_resort: {
     label: "Take a paid resort vacation",
     target: "harbor_dock",
@@ -971,7 +983,8 @@ function availableOrder(s, id = null) {
 export function legal(s) {
   normalizeRealism(s);
   if (s.status === "complete") return [];
-  if (shiftEnded(s)) return ["rest"];
+  if (shiftEnded(s))
+    return weekendBeachTime(s) ? ["beach_day", "rest"] : ["rest"];
   const actions = [],
     cap = capacity(s),
     ops = s.operations;
@@ -1199,6 +1212,7 @@ function requestInvestment(s) {
   return s.request;
 }
 export function baseline(s) {
+  if (weekendBeachTime(s)) return "beach_day";
   if (shiftEnded(s) || canClockOut(s)) return "rest";
   if (s.retirement?.ready) return "rest";
   const a = legal(s),
@@ -1470,6 +1484,8 @@ export function reason(s, action) {
       buy_resources: `Purchase six seed, brine and jar kits for ${ECONOMY.resourceBatch * ECONOMY.resourceUnitCost} coins, delivered by ship.`,
       plant_crop: `Consume six kits: grow ${ECONOMY.growTicks} minutes, ferment ${ECONOMY.fermentTicks} minutes, pack ${ECONOMY.packTicks} minutes before dispatch.`,
       expand_factory: `Reinvest ${ECONOMY.factoryExpansion} coins in three concurrent greenhouse crops and fermentation capacity.`,
+      beach_day:
+        "Weekends are for the beach: walk to the cove, ease onto a lounge chair and rest until the sun sets, with neighbours sharing the sand.",
       rest: "Take due meal/rest breaks, return home after the ten-hour shift and finish night service by 22:00. Weekends are off.",
       hire_employee: `Hire ${CREW_NAMES[s.crew.length]} for ${80 + s.crew.length * 40} coins. Teammates travel at 68% of Brandon’s speed and earn a daily wage; each employee transport is purchased separately.`,
       collect: `Load up to ${capacity(s)} already-paid cases from ${s.cafe} at the active business.`,
@@ -1563,6 +1579,12 @@ export function begin(s, action, meta = {}) {
     return false;
   const b = s.brandon,
     choices = legal(s);
+  if (action === "beach_day" && s.request === "beach_day")
+    s.weekendLeisure = {
+      week: Math.floor(((s.schedule.day || 1) - 1) / 7),
+      activity: "beach",
+      chosenAt: s.tick,
+    };
   const endedShift = action === "rest" && clockOut(s);
   if (endedShift)
     event(
@@ -1679,7 +1701,21 @@ export function command(s, type, value) {
       throw new Error(
         "Go to next shift is available after Brandon clocks out.",
       );
-    if (value === "morning")
+    if (value === "beach") {
+      if (!s.schedule?.isWeekend)
+        throw new Error("The beach weekend is only available on weekends.");
+      s.weekendLeisure = {
+        week: Math.floor(((s.schedule.day || 1) - 1) / 7),
+        activity: "beach",
+        chosenAt: s.tick,
+      };
+      event(
+        s,
+        "dispatch",
+        "Brandon is spending the rest of the weekend lounging on the beach.",
+      );
+    }
+    if (value === "morning" || value === "beach")
       s.brandon.shift.nextShiftAt = nextShiftTick(s, true);
     s.daytimeUntil = s.brandon.shift.nextShiftAt;
     s.status = "running";
@@ -2008,7 +2044,8 @@ function finish(s) {
     a === "rest" &&
     !s.retirement.ready &&
     b.homeRoutine?.phase === "sleeping" &&
-    shiftEnded(s)
+    shiftEnded(s) &&
+    !weekendBeachTime(s)
   )
     return;
   if (b.buildingVisit?.phase === "inside") {
@@ -2996,7 +3033,8 @@ function roadStep(s, b, target, mode, continuing = false) {
     // fades its sideways offset out instead of snapping onto the line.
     if (m.offset) {
       const fade = Math.max(0, 1 - (m.progress - m.start) / m.blend);
-      if (fade > 0 && t < 1) proposed.forEach((x, i) => (proposed[i] = x + m.offset[i] * fade));
+      if (fade > 0 && t < 1)
+        proposed.forEach((x, i) => (proposed[i] = x + m.offset[i] * fade));
     }
     b.navigationStep = speed;
     b.navigationTrail = null;
@@ -3077,7 +3115,8 @@ function roadStep(s, b, target, mode, continuing = false) {
         const m = b.move,
           at = m.progress / m.distance;
         const off = b.position.map(
-          (x, i) => x - (NODES[m.from][i] + (NODES[m.to][i] - NODES[m.from][i]) * at),
+          (x, i) =>
+            x - (NODES[m.from][i] + (NODES[m.to][i] - NODES[m.from][i]) * at),
         );
         if (length(off, [0, 0]) > 0.05) {
           m.offset = off;
@@ -3489,6 +3528,25 @@ export function step(s) {
           return s;
         }
       }
+      let beachStay = false;
+      if (a === "beach_day") {
+        b.buildingVisit ||= {
+          phase: "entering",
+          beach: true,
+          door: [...BEACH.door],
+          returnPosition: [...b.position],
+          points: BEACH.approach.map((p) => [...p]),
+        };
+        if (b.buildingVisit.phase === "entering") {
+          if (buildingWalk(b, b.buildingVisit))
+            b.buildingVisit.phase = "inside";
+          return s;
+        }
+        // Settled on the lounger: stay until the weekend leisure window closes.
+        beachStay = true;
+        if (!weekendBeachTime(s)) finish(s);
+        else b.beachTicks = (b.beachTicks || 0) + 1;
+      }
       const warehouseAction =
         [
           "collect",
@@ -3558,7 +3616,7 @@ export function step(s) {
       const trip = actionVoyage(s, b);
       if (trip && trip.mode) {
         makeVoyage(s, b, trip.mode, trip.island, trip.order, trip.purpose);
-      } else {
+      } else if (!beachStay) {
         b.work += workweekEfficiency(s, b);
         if (a === "wait") s.idle++;
         if (b.work >= workDuration(s, a)) finish(s);

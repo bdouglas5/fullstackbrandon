@@ -1,4 +1,3 @@
-import SetbacksPanel from "./SetbacksPanel.jsx";
 import DefensePanel from "./DefensePanel.jsx";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -27,7 +26,6 @@ const BUSINESS_TABS = [
   ["operations", Store, "Operations & Dispatch"],
   ["businesses", MapPin, "Businesses & Islands"],
   ["reviews", Sparkles, "Reviews"],
-  ["test", Sparkles, "Controls"],
 ];
 const UPGRADE_TABS = [
   ["defense", Wrench, "Defense"],
@@ -431,13 +429,6 @@ export default function EmpireConsole({
             </details>
           </section>
         )}
-        {tab === "test" && (
-          <section className="test-controls">
-            <h3>Controls</h3>
-            <SetbacksPanel state={state} act={act} locked={locked} />
-          </section>
-        )}
-
         {tab === "operations" && (
           <details className="console-section">
             <summary>Live dispatch</summary>

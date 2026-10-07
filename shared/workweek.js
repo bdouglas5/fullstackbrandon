@@ -178,7 +178,9 @@ function isProductive(actor) {
     return false;
   return (
     !!actor.action &&
-    !["rest", "wait", "vacation_resort", "host_bbq"].includes(actor.action)
+    !["rest", "wait", "vacation_resort", "host_bbq", "beach_day"].includes(
+      actor.action,
+    )
   );
 }
 

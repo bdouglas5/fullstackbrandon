@@ -10,7 +10,7 @@ const labels = {
   meal_break: "Lunch break",
   rest_break: "Paid rest break",
   off_duty: "Off duty",
-  weekend: "Weekend at home",
+  weekend: "Weekend at the beach",
   vacation: "Resort vacation",
   bbq: "Weekend BBQ",
 };
@@ -218,6 +218,9 @@ export default function OperationsPanel({ state, locked, prioritize }) {
           )}
         </div>
         <div className="operations-actions">
+          <Suggest action="beach_day" {...{ locked, prioritize }}>
+            Spend the weekend at the beach · free
+          </Suggest>
           <Suggest action="vacation_resort" {...{ locked, prioritize }}>
             Plan a resort weekend · {VACATION_POLICY.price} coins
           </Suggest>
