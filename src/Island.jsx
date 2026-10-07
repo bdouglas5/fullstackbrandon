@@ -2,7 +2,6 @@ import {
   createAdaptiveResolution,
   resolutionCeiling,
 } from "./adaptive-resolution.js";
-import "./adaptive-resolution.css";
 import { SHORELINE, shorelineCollection } from "../shared/shoreline.js";
 import { createShorelineWorld } from "./world-shoreline.js";
 import {
@@ -86,12 +85,6 @@ export default function Island({
   placingOil = false,
   onPlaceOil,
 }) {
-  const [resolutionNotice, setResolutionNotice] = useState(null);
-  useEffect(() => {
-    if (!resolutionNotice) return;
-    const timer = setTimeout(() => setResolutionNotice(null), 4500);
-    return () => clearTimeout(timer);
-  }, [resolutionNotice]);
   const [workplacePinned, setWorkplacePinned] = useState(false);
   const [workplaceHovered, setWorkplaceHovered] = useState(false);
   const workplaceAnchor = useRef(null);
@@ -524,7 +517,6 @@ export default function Island({
         renderer.domElement.dataset.pixelRatio = String(
           renderer.getPixelRatio(),
         );
-        setResolutionNotice(qualityChange);
       }
       if (resolution.fps !== null)
         renderer.domElement.dataset.measuredFps = String(
@@ -1699,6 +1691,8 @@ export default function Island({
       );
       renderFrames++;
       renderer.domElement.dataset.renderFrames = String(renderFrames);
+      if (renderFrames === 1 && host.current)
+        host.current.dataset.ready = "true";
       if (renderFrames === 1)
         renderer.domElement.dataset.firstFrameMs = String(
           Math.round(performance.now()),
@@ -1847,21 +1841,9 @@ export default function Island({
   }, [shorelinePinned]);
   return (
     <div className="island-canvas" ref={host}>
-      {resolutionNotice && (
-        <div
-          className="resolution-notice"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {resolutionNotice.direction === "lower"
-            ? "Resolution lowered for smoother motion"
-            : "Resolution raised for sharper detail"}
-          <small>
-            {resolutionNotice.fps} FPS ·{" "}
-            {Math.round(resolutionNotice.scale * 100)}% resolution · aiming for
-            60 FPS
-          </small>
+      {!failed && (
+        <div className="island-boot" role="status" aria-label="Preparing the island">
+          <div className="loader" aria-hidden="true" />
         </div>
       )}
       {!failed && (

@@ -50,22 +50,8 @@ for (const viewport of [
         { timeout: 60000 },
       )
       .toBeLessThan(1);
-    await expect(page.locator(".resolution-notice")).toContainText(
-      "Resolution lowered",
-    );
-    await expect(page.locator(".resolution-notice")).toContainText(
-      "aiming for 60 FPS",
-    );
-    const noticeBox = await page.locator(".resolution-notice").boundingBox();
-    for (const overlay of [".weather-pill", ".scene-tools"]) {
-      const other = await page.locator(overlay).boundingBox();
-      const overlaps =
-        noticeBox.x < other.x + other.width &&
-        noticeBox.x + noticeBox.width > other.x &&
-        noticeBox.y < other.y + other.height &&
-        noticeBox.y + noticeBox.height > other.y;
-      expect(overlaps).toBe(false);
-    }
+    // Adaptation is silent: no on-screen notice may appear.
+    await expect(page.locator(".resolution-notice")).toHaveCount(0);
     // Give the lens a frame to resize its offscreen buffers as well.
     await expect(canvas).toHaveAttribute("data-tilt-shift", "always-on");
     const after = await canvas.evaluate((el) => ({

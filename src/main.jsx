@@ -36,6 +36,7 @@ import { ACTIONS, fresh } from "../shared/engine.js";
 import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/manrope";
 import "./style.css";
+import "./polish.css";
 import { lockPageGestures } from "./page-gestures.js";
 import { api, subscribe } from "./game-client.js";
 const defaultController =
