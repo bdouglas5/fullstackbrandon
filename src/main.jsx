@@ -25,9 +25,11 @@ import {
   History,
   Sun,
   CloudRain,
-  Expand,
+  RotateCcw,
   Trophy,
   AlertCircle,
+  Maximize2,
+  Minimize2,
 } from "./icons.js";
 const EmpireConsole = lazy(() => import("./components/EmpireConsole.jsx"));
 import { frameBus } from "./frame-bus.js";
@@ -37,6 +39,7 @@ import "@fontsource-variable/dm-sans";
 import "@fontsource-variable/manrope";
 import "./style.css";
 import "./polish.css";
+import "./mobile.css";
 import { lockPageGestures } from "./page-gestures.js";
 import { api, subscribe } from "./game-client.js";
 const defaultController =
@@ -53,6 +56,20 @@ function IslandPlaceholder() {
       <p>Preparing the island…</p>
     </div>
   );
+}
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const update = () => setMatches(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [query]);
+  return matches;
 }
 
 function App() {
@@ -81,6 +98,54 @@ function App() {
     brainButton.current?.focus({ preventScroll: true });
   };
   const errorTimer = useRef();
+  // Phones keep the scene clear: play, Brandon and Business sit in a tray
+  // under the world, and full screen swaps them for a small fading dock.
+  const compact = useMediaQuery("(max-width: 800px)");
+  const [immersive, setImmersive] = useState(false);
+  const [hudIdle, setHudIdle] = useState(false);
+  const hudTimer = useRef();
+  function wakeHud() {
+    setHudIdle(false);
+    clearTimeout(hudTimer.current);
+    hudTimer.current = setTimeout(() => setHudIdle(true), 4500);
+  }
+  function enterImmersive() {
+    setImmersive(true);
+    try {
+      window.history.pushState(
+        { ...window.history.state, immersive: true },
+        "",
+      );
+    } catch {}
+    const root = document.documentElement;
+    if (root.requestFullscreen && !document.fullscreenElement)
+      root.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+  }
+  function exitImmersive() {
+    if (window.history.state?.immersive) window.history.back();
+    else setImmersive(false);
+  }
+  useEffect(() => {
+    if (!immersive) return;
+    const root = document.documentElement;
+    root.classList.add("immersive-open");
+    wakeHud();
+    const pop = () => setImmersive(false);
+    const fullscreen = () => {
+      if (!document.fullscreenElement) exitImmersive();
+    };
+    window.addEventListener("popstate", pop);
+    document.addEventListener("fullscreenchange", fullscreen);
+    return () => {
+      root.classList.remove("immersive-open");
+      clearTimeout(hudTimer.current);
+      setHudIdle(false);
+      window.removeEventListener("popstate", pop);
+      document.removeEventListener("fullscreenchange", fullscreen);
+      if (document.fullscreenElement)
+        document.exitFullscreen?.().catch(() => {});
+    };
+  }, [immersive]);
   const [shiftTransition, setShiftTransition] = useState(null);
   const morningTarget = useRef(null);
   function closeIntro() {
@@ -122,6 +187,15 @@ function App() {
       restore?.focus({ preventScroll: true });
     };
   }, [panel, intro]);
+  useEffect(() => {
+    if (!immersive || panel || intro) return;
+    const key = (e) => {
+      if (e.key === "Escape") exitImmersive();
+      else wakeHud();
+    };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [immersive, panel, intro]);
   const live = run?.state || preview,
     state = history?.[replay]?.state || live;
   const lastDecision = state.decisions?.at(-1);
@@ -343,6 +417,84 @@ function App() {
     }
   }
   const locked = loading || busy || !!history || live.status === "complete";
+  const playLabel =
+    live.status === "ready"
+      ? "Play simulation"
+      : live.status === "running"
+        ? "Pause simulation"
+        : live.status === "complete"
+          ? "Start a new business"
+          : "Resume simulation";
+  const togglePlay = () =>
+    !run || live.status === "complete"
+      ? restart()
+      : act(live.status === "ready" ? "start" : "pause");
+  const playDisabled = loading || busy || !!history;
+  const pendingOrders = state.customerQueue?.length || 0;
+  const docked = compact && !immersive;
+  const hudHidden =
+    immersive &&
+    hudIdle &&
+    live.status === "running" &&
+    !history &&
+    !brainOpen &&
+    !shiftEnded(state);
+  const sceneControls = (
+    <>
+      <div className="mobile-play">
+        <span>
+          <b>Brandon’s pickle delivery business.</b>
+          <small>
+            {state.status === "ready"
+              ? "AI plans. Brandon delivers. You can step in."
+              : `${state.served} orders · ${Math.floor(state.money || 0).toLocaleString()} coins`}
+          </small>
+        </span>
+        <button
+          className="primary-button"
+          disabled={playDisabled}
+          onClick={togglePlay}
+        >
+          {live.status === "running" ? <Pause size={15} /> : <Play size={15} />}{" "}
+          {playLabel}
+        </button>
+      </div>
+      <div className={`world-bottom ${following ? "is-following" : ""}`}>
+        {!following && (
+          <button
+            className="brandon-card"
+            onClick={() => {
+              setPanel("inspect");
+            }}
+          >
+            <span className="avatar-mark">B.</span>
+            <span>
+              <b>
+                Fullstack Brandon{" "}
+                <span className="tiny-tag">PROBLEM SOLVER</span>
+              </b>
+              <small>{thought}</small>
+              {lastDecision && state.status !== "complete" && (
+                <small className="decision-line">
+                  Decided: {lastDecision.label}
+                  {lastDecision.outcome &&
+                  lastDecision.outcome !== "In progress"
+                    ? ` → ${lastDecision.outcome}`
+                    : ` — ${lastDecision.reason}`}
+                </small>
+              )}
+            </span>
+            <ScanEye size={20} />
+          </button>
+        )}
+        <button className="business-launch" onClick={openBusiness}>
+          <Users size={17} /> Business{" "}
+          <span>{pendingOrders} pending orders</span>
+        </button>
+        <span className="orbit-hint">DRAG TO EXPLORE · SCROLL TO ZOOM</span>
+      </div>
+    </>
+  );
   return (
     <div className="app-shell">
       <header className="topbar" inert={!!panel || intro}>
@@ -398,10 +550,17 @@ function App() {
           act={act}
           locked={locked}
         />
+        {docked && <div className="mobile-controls">{sceneControls}</div>}
         <section
-          className="world-panel"
+          className={
+            "world-panel" +
+            (immersive ? " is-immersive" : "") +
+            (hudHidden ? " hud-idle" : "")
+          }
           data-phase={state.world?.phase || "day"}
           aria-label="Fullstack Brandon simulation"
+          onPointerDownCapture={immersive ? wakeHud : undefined}
+          onPointerMove={immersive ? wakeHud : undefined}
         >
           {brainOpen && (
             <BrainPanel
@@ -524,80 +683,65 @@ function App() {
           </div>
           <div className="scene-tools">
             <button
+              className="glass-button immersive-toggle"
+              onClick={immersive ? exitImmersive : enterImmersive}
+              aria-pressed={immersive}
+              aria-label={immersive ? "Exit full screen" : "Full screen"}
+              title={immersive ? "Exit full screen" : "Full screen"}
+            >
+              {immersive ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              <span>{immersive ? "Exit" : "Full screen"}</span>
+            </button>
+            <button
               className="glass-button"
               onClick={() => setViewReset((n) => n + 1)}
               title="Reset camera"
               aria-label="Reset camera"
             >
-              <Expand size={18} />
+              <RotateCcw size={17} />
             </button>
           </div>
-          <div className="mobile-play">
-            <span>
-              <b>Brandon’s pickle delivery business.</b>
-              <small>
-                {state.status === "ready"
-                  ? "AI plans. Brandon delivers. You can step in."
-                  : `${state.served} orders · ${Math.floor(state.money || 0).toLocaleString()} coins`}
-              </small>
-            </span>
-            <button
-              className="primary-button"
-              disabled={loading || busy || !!history}
-              onClick={() =>
-                !run || live.status === "complete"
-                  ? restart()
-                  : act(live.status === "ready" ? "start" : "pause")
-              }
-            >
-              {live.status === "running" ? (
-                <Pause size={15} />
-              ) : (
-                <Play size={15} />
-              )}{" "}
-              {live.status === "ready"
-                ? "Play simulation"
-                : live.status === "running"
-                  ? "Pause simulation"
-                  : live.status === "complete"
-                    ? "Start a new business"
-                    : "Resume simulation"}
-            </button>
-          </div>
-          <div className={`world-bottom ${following ? "is-following" : ""}`}>
-            {!following && (
+          {!docked && !immersive && sceneControls}
+          {immersive && (
+            <div className="immersive-dock">
               <button
-                className="brandon-card"
-                onClick={() => {
-                  setPanel("inspect");
-                }}
+                className="dock-play"
+                disabled={playDisabled}
+                aria-label={playLabel}
+                title={playLabel}
+                onClick={togglePlay}
+              >
+                {live.status === "running" ? (
+                  <Pause size={20} />
+                ) : (
+                  <Play size={20} />
+                )}
+              </button>
+              <button
+                className="dock-thought"
+                onClick={() => setPanel("inspect")}
+                aria-label="Inspect Brandon's decisions"
               >
                 <span className="avatar-mark">B.</span>
                 <span>
                   <b>
-                    Fullstack Brandon{" "}
-                    <span className="tiny-tag">PROBLEM SOLVER</span>
+                    {live.status === "running"
+                      ? `${state.served} orders · ${Math.floor(state.money || 0).toLocaleString()} coins`
+                      : "Fullstack Brandon"}
                   </b>
                   <small>{thought}</small>
-                  {lastDecision && state.status !== "complete" && (
-                    <small className="decision-line">
-                      Decided: {lastDecision.label}
-                      {lastDecision.outcome &&
-                      lastDecision.outcome !== "In progress"
-                        ? ` → ${lastDecision.outcome}`
-                        : ` — ${lastDecision.reason}`}
-                    </small>
-                  )}
                 </span>
-                <ScanEye size={20} />
               </button>
-            )}
-            <button className="business-launch" onClick={openBusiness}>
-              <Users size={17} /> Business{" "}
-              <span>{state.customerQueue?.length || 0} pending orders</span>
-            </button>
-            <span className="orbit-hint">DRAG TO EXPLORE · SCROLL TO ZOOM</span>
-          </div>
+              <button
+                className="dock-business"
+                onClick={openBusiness}
+                aria-label={`Business, ${pendingOrders} pending orders`}
+              >
+                <Users size={19} />
+                {pendingOrders > 0 && <i>{pendingOrders}</i>}
+              </button>
+            </div>
+          )}
           {live.status === "complete" && !history && (
             <div
               className="result-card"

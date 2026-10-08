@@ -39,3 +39,5 @@ export { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
 export { default as Code2 } from "lucide-react/dist/esm/icons/code-xml.js";
 
 export { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+export { default as Maximize2 } from "lucide-react/dist/esm/icons/maximize-2.js";
+export { default as Minimize2 } from "lucide-react/dist/esm/icons/minimize-2.js";

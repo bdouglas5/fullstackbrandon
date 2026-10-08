@@ -1,0 +1,557 @@
+/* Mobile-first scene layout. Loaded last.
+   - Inline (phone): the stage shows only the clock, full screen + camera
+     reset, and the follow / stats chips. Play, Brandon and Business live in
+     a tray under the stage (.mobile-controls).
+   - Full screen (.is-immersive, any viewport): edge-to-edge world with a
+     single slim dock that fades away while the simulation plays. */
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --hud-ink: #21403f;
+  --hud-glass: #f7fbefeb;
+  --hud-line: #ffffffcc;
+  --hud-shadow: 0 6px 22px #1c3a4224;
+}
+
+/* ---------- Full screen toggle (every viewport) ---------- */
+.immersive-toggle span {
+  display: none;
+}
+.scene-tools .glass-button {
+  cursor: pointer;
+}
+
+/* ---------- Inline phone layout ---------- */
+@media (max-width: 800px) {
+  .world-panel {
+    height: clamp(360px, calc(100svh - 230px), 600px);
+  }
+
+  /* One quiet clock chip instead of status + weather pills. */
+  .world-panel .world-badges {
+    display: none;
+  }
+  .world-panel .world-top {
+    top: 12px;
+    left: 12px;
+    right: auto;
+  }
+  .world-panel .weather-pill {
+    min-height: 34px;
+    padding: 0 11px;
+    gap: 6px;
+    border-radius: 17px;
+    background: var(--hud-glass);
+    border: 1px solid var(--hud-line);
+    box-shadow: var(--hud-shadow);
+    font-size: 10px;
+    color: #4f7378;
+    text-transform: capitalize;
+  }
+  .world-panel .weather-pill b {
+    font-size: 11px;
+    color: var(--hud-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .world-panel .weather-pill svg {
+    color: #d8a73a;
+  }
+
+  /* Top-right: labelled full screen pill, camera reset beneath it. */
+  .world-panel .scene-tools {
+    top: 12px;
+    right: 12px;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .world-panel .scene-tools .glass-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    background: var(--hud-glass);
+    border-color: var(--hud-line);
+    color: var(--hud-ink);
+    box-shadow: var(--hud-shadow);
+  }
+  .world-panel .scene-tools .immersive-toggle {
+    width: auto;
+    display: flex;
+    gap: 7px;
+    padding: 0 13px 0 11px;
+    border-radius: 20px;
+    background: #23484d;
+    border-color: #23484d;
+    color: #f4f9ea;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .world-panel .scene-tools .immersive-toggle span {
+    display: inline;
+  }
+
+  /* Follow + stats: two small chips, bottom-left of the stage. */
+  .world-panel .follow-button,
+  .world-panel .workplace-toggle {
+    top: auto;
+    bottom: 12px;
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+    border-radius: 18px;
+    box-shadow: var(--hud-shadow);
+  }
+  .world-panel .follow-button {
+    left: 12px;
+  }
+  .world-panel .workplace-toggle {
+    left: auto;
+    right: 12px;
+  }
+  .world-panel .replay-bar {
+    bottom: 58px;
+    left: 12px;
+    right: 12px;
+  }
+  .world-panel .resting-notice {
+    top: 56px;
+  }
+  .world-panel .result-card {
+    max-height: calc(100% - 24px);
+  }
+
+  /* Tray under the stage: the controls that used to cover the island. */
+  .mobile-controls {
+    display: grid;
+    gap: 8px;
+    padding: 10px 10px 4px;
+    background: #f8faf4;
+  }
+  .mobile-controls .mobile-play {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 12px 12px 14px;
+    background: #fff;
+    border: 1px solid #e3eadb;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px #273b340c;
+    backdrop-filter: none;
+  }
+  .mobile-controls .mobile-play > span {
+    min-width: 0;
+    flex: 1;
+  }
+  .mobile-controls .mobile-play b {
+    font-size: 13px;
+    line-height: 1.25;
+    color: var(--hud-ink);
+  }
+  .mobile-controls .mobile-play small {
+    font-size: 11px;
+    margin-top: 3px;
+  }
+  .mobile-controls .mobile-play .primary-button {
+    min-height: 44px;
+    padding: 0 16px;
+    font-size: 13px;
+    border-radius: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .mobile-controls .world-bottom {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .mobile-controls .world-bottom.is-following {
+    grid-template-columns: 1fr;
+  }
+  .mobile-controls .brandon-card {
+    min-width: 0;
+    max-width: none;
+    min-height: 52px;
+    padding: 9px 12px 9px 9px;
+    gap: 10px;
+    background: #fff;
+    border: 1px solid #e3eadb;
+    box-shadow: 0 2px 10px #273b340c;
+    backdrop-filter: none;
+  }
+  .mobile-controls .brandon-card .avatar-mark {
+    width: 34px;
+    height: 34px;
+    font-size: 19px;
+    border-radius: 10px;
+  }
+  .mobile-controls .brandon-card .tiny-tag,
+  .mobile-controls .brandon-card .decision-line {
+    display: none;
+  }
+  .mobile-controls .brandon-card b {
+    font-size: 12px;
+  }
+  .mobile-controls .brandon-card small {
+    margin-top: 3px;
+    max-width: none;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  .mobile-controls .brandon-card > svg {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .mobile-controls .business-launch {
+    min-height: 52px;
+    padding: 0 16px;
+    border-radius: 15px;
+    white-space: nowrap;
+    justify-content: center;
+    box-shadow: 0 2px 10px #273b340c;
+  }
+  .mobile-controls .business-launch span,
+  .mobile-controls .orbit-hint {
+    display: none;
+  }
+  .game-layout:has(.result-card) .mobile-controls,
+  .game-layout:has(.replay-bar) .mobile-controls .mobile-play {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .world-panel .scene-tools .immersive-toggle span {
+    display: none;
+  }
+  .world-panel .scene-tools .immersive-toggle {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .mobile-controls .mobile-play .primary-button {
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
+
+/* ---------- Full screen ---------- */
+html.immersive-open,
+html.immersive-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+.world-panel.is-immersive {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+}
+@keyframes immersive-hud-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.immersive-dock {
+  animation: immersive-hud-in 0.4s var(--ease-out, ease-out) backwards;
+}
+.world-panel.is-immersive .world-badges,
+.world-panel.is-immersive .orbit-hint {
+  display: none;
+}
+
+/* Clock, top-left. */
+.world-panel.is-immersive .world-top {
+  top: calc(var(--safe-top) + 12px);
+  left: calc(var(--safe-left) + 12px);
+  right: auto;
+}
+.world-panel.is-immersive .weather-pill {
+  min-height: 34px;
+  padding: 0 11px;
+  gap: 6px;
+  border-radius: 17px;
+  background: #f7fbefd9;
+  border: 1px solid var(--hud-line);
+  box-shadow: var(--hud-shadow);
+  font-size: 10px;
+  color: #4f7378;
+  text-transform: capitalize;
+}
+.world-panel.is-immersive .weather-pill b {
+  font-size: 11px;
+  color: var(--hud-ink);
+  font-variant-numeric: tabular-nums;
+}
+.world-panel.is-immersive .weather-pill svg {
+  color: #d8a73a;
+}
+
+/* Exit + camera reset, top-right, side by side. */
+.world-panel.is-immersive .scene-tools {
+  top: calc(var(--safe-top) + 12px);
+  right: calc(var(--safe-right) + 12px);
+  flex-direction: row-reverse;
+  gap: 8px;
+}
+.world-panel.is-immersive .scene-tools .glass-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 20px;
+  background: #f7fbefd9;
+  border: 1px solid var(--hud-line);
+  color: var(--hud-ink);
+  box-shadow: var(--hud-shadow);
+}
+.world-panel.is-immersive .scene-tools .immersive-toggle span {
+  display: none;
+}
+
+/* Follow + stats chips float just above the dock. */
+.world-panel.is-immersive .follow-button,
+.world-panel.is-immersive .workplace-toggle {
+  top: auto;
+  bottom: calc(var(--safe-bottom) + 84px);
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 17px;
+  box-shadow: var(--hud-shadow);
+}
+.world-panel.is-immersive .follow-button {
+  left: calc(var(--safe-left) + 12px);
+  right: auto;
+}
+.world-panel.is-immersive .workplace-toggle {
+  left: auto;
+  right: calc(var(--safe-right) + 12px);
+}
+
+/* The dock: [play] [Brandon's live thought] [business]. */
+.immersive-dock {
+  position: absolute;
+  z-index: 3;
+  left: calc(var(--safe-left) + 10px);
+  right: calc(var(--safe-right) + 10px);
+  bottom: calc(var(--safe-bottom) + 10px);
+  margin: 0 auto;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 22px;
+  background: #f7fbeff0;
+  border: 1px solid var(--hud-line);
+  box-shadow: 0 10px 30px #1c3a4230;
+}
+.immersive-dock button {
+  border: 0;
+  cursor: pointer;
+  color: var(--hud-ink);
+}
+.immersive-dock .dock-play {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  background: #23484d;
+  color: #f4f9ea;
+}
+.immersive-dock .dock-play:disabled {
+  opacity: 0.55;
+}
+.immersive-dock .dock-thought {
+  flex: 1;
+  min-width: 0;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px 0 4px;
+  background: none;
+  text-align: left;
+}
+.immersive-dock .dock-thought .avatar-mark {
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  border-radius: 11px;
+}
+.immersive-dock .dock-thought > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.immersive-dock .dock-thought b {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5d7a63;
+  font-variant-numeric: tabular-nums;
+}
+.immersive-dock .dock-thought small {
+  font-size: 12.5px;
+  color: var(--hud-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.immersive-dock .dock-business {
+  position: relative;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 17px;
+  display: grid;
+  place-items: center;
+  background: #e4ecd9;
+}
+.immersive-dock .dock-business i {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #d9773f;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Overlays that must clear the dock and notch. */
+.world-panel.is-immersive .replay-bar {
+  bottom: calc(var(--safe-bottom) + 84px);
+  left: calc(var(--safe-left) + 12px);
+  right: calc(var(--safe-right) + 12px);
+}
+.world-panel.is-immersive .resting-notice {
+  top: calc(var(--safe-top) + 58px);
+}
+.world-panel.is-immersive .brain-panel {
+  top: calc(var(--safe-top) + 58px);
+  max-height: calc(100% - var(--safe-top) - var(--safe-bottom) - 150px);
+}
+.world-panel.is-immersive:has(.result-card) .immersive-dock,
+.world-panel.is-immersive:has(.replay-bar) .immersive-dock .dock-play {
+  display: none;
+}
+
+/* Idle: while playing, the HUD gets out of the way. Any touch brings it
+   back; the exit button stays faintly visible so the way out is obvious. */
+.world-panel.is-immersive .weather-pill,
+.world-panel.is-immersive .scene-tools .glass-button,
+.world-panel.is-immersive .follow-button,
+.world-panel.is-immersive .workplace-toggle,
+.immersive-dock {
+  transition:
+    opacity 0.45s var(--ease-out, ease-out),
+    transform 0.45s var(--ease-out, ease-out);
+}
+.world-panel.hud-idle .immersive-dock {
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+}
+.world-panel.hud-idle .follow-button,
+.world-panel.hud-idle .workplace-toggle,
+.world-panel.hud-idle .scene-tools .glass-button:not(.immersive-toggle) {
+  opacity: 0;
+  pointer-events: none;
+}
+.world-panel.hud-idle .weather-pill,
+.world-panel.hud-idle .scene-tools .immersive-toggle {
+  opacity: 0.55;
+}
+
+/* Desktop full screen gets a touch more breathing room. */
+@media (min-width: 801px) {
+  .world-panel.is-immersive .world-top,
+  .world-panel.is-immersive .scene-tools {
+    top: 20px;
+  }
+  .world-panel.is-immersive .world-top {
+    left: 20px;
+  }
+  .world-panel.is-immersive .scene-tools {
+    right: 20px;
+  }
+  .immersive-dock {
+    bottom: 20px;
+  }
+  .world-panel.is-immersive .follow-button,
+  .world-panel.is-immersive .workplace-toggle {
+    bottom: 96px;
+  }
+}
+
+/* In full screen the achievement toast becomes a slim pill under the clock. */
+html.immersive-open .achievement-announcer {
+  top: calc(var(--safe-top) + 58px);
+  width: min(420px, calc(100vw - 24px));
+}
+html.immersive-open .achievement-banner {
+  gap: 10px;
+  padding: 8px 8px 8px 10px;
+  border-radius: 16px;
+}
+html.immersive-open .achievement-medal {
+  flex-basis: 34px;
+  height: 34px;
+  border-radius: 11px;
+}
+html.immersive-open .achievement-medal svg {
+  width: 18px;
+  height: 18px;
+}
+html.immersive-open .achievement-banner-content {
+  gap: 2px;
+}
+html.immersive-open .achievement-banner-content strong {
+  font-size: 14px;
+}
+html.immersive-open .achievement-banner-content > span:last-child {
+  display: none;
+}
+
+/* Landscape phones: chips sit beside the dock so the island keeps its height. */
+@media (max-height: 520px) and (min-width: 640px) {
+  .world-panel.is-immersive .world-top,
+  .world-panel.is-immersive .scene-tools {
+    top: calc(var(--safe-top) + 10px);
+  }
+  .world-panel.is-immersive .follow-button,
+  .world-panel.is-immersive .workplace-toggle {
+    bottom: calc(var(--safe-bottom) + 18px);
+  }
+  .world-panel.is-immersive .tool-long {
+    display: none;
+  }
+  .immersive-dock {
+    left: calc(var(--safe-left) + 160px);
+    right: calc(var(--safe-right) + 120px);
+    bottom: calc(var(--safe-bottom) + 8px);
+    max-width: 520px;
+  }
+  .world-panel.is-immersive .resting-notice,
+  .world-panel.is-immersive .brain-panel,
+  html.immersive-open .achievement-announcer {
+    top: calc(var(--safe-top) + 10px);
+  }
+  .world-panel.is-immersive .replay-bar {
+    bottom: calc(var(--safe-bottom) + 74px);
+  }
+}

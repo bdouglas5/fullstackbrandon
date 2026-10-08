@@ -220,6 +220,49 @@ test("mobile scene controls stay separate and clickable after closing the introd
   await expect(play).toHaveText("Resume simulation");
 });
 
+test("phone full screen shows the world edge to edge with a slim dock", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page
+    .getByRole("dialog", { name: "Fullstack Brandon" })
+    .getByRole("button", { name: "Close introduction" })
+    .click();
+  const world = page.locator(".world-panel");
+  // Inline: play, Brandon and Business sit under the stage, not on it.
+  const stage = await world.boundingBox();
+  const tray = await page.locator(".mobile-controls").boundingBox();
+  expect(tray.y).toBeGreaterThanOrEqual(stage.y + stage.height - 1);
+  await page.getByRole("button", { name: "Full screen", exact: true }).click();
+  await expect(world).toHaveClass(/is-immersive/);
+  expect(await world.boundingBox()).toEqual({
+    x: 0,
+    y: 0,
+    width: 390,
+    height: 844,
+  });
+  await expect(page.locator(".mobile-controls")).toHaveCount(0);
+  const play = page.locator(".immersive-dock .dock-play");
+  await expect(play).toBeVisible();
+  await play.click();
+  await expect(play).toHaveAttribute("aria-label", "Pause simulation");
+  await page.locator(".immersive-dock .dock-business").click();
+  await expect(
+    page.getByRole("dialog", { name: "Live business" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(world).toHaveClass(/is-immersive/);
+  await page.keyboard.press("Escape");
+  await expect(world).not.toHaveClass(/is-immersive/);
+  await expect(
+    page.locator(".mobile-controls .mobile-play .primary-button"),
+  ).toHaveText("Pause simulation");
+  await page.getByRole("button", { name: "Full screen", exact: true }).click();
+  await page.goBack();
+  await expect(world).not.toHaveClass(/is-immersive/);
+});
+
 test("compact navigation keeps tools and tests in their consolidated sections", async ({
   page,
 }) => {
